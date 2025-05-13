@@ -55,7 +55,7 @@ vio:
 imu:
   imu_en: true
   imu_int_frame: 30
-  vel_cov: 100
+  vel_cov: 10
   gyr_cov: 0.3 # 0.3
   acc_cov: 0.5 # 0.5
   gyr_cov_state: 1000

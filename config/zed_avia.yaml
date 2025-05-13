@@ -4,7 +4,7 @@ common:
   lid_topic: "/livox/lidar"
   imu_topic: "/livox/imu"
   #imu_topic: "/zed2/zed_node/imu/data"
-  img_en: 1
+  img_en: 0
   lidar_en: 1
   ros_driver_bug_fix: false
 
@@ -41,7 +41,7 @@ time_offset:
 preprocess:
   point_filter_num: 1
   filter_en: true
-  filter_size_surf: 0.2
+  filter_size_surf: 0.4
   lidar_type: 1 # Livox Avia LiDAR
   scan_line: 6
   blind: 0.8
@@ -62,10 +62,15 @@ vio:
 imu:
   imu_en: true
   imu_int_frame: 30
-  acc_cov: 0.5 # 0.2
-  gyr_cov: 0.3 # 0.5
-  b_acc_cov: 0.0001 # 0.1
-  b_gyr_cov: 0.0001 # 0.1
+  vel_cov: 10
+  gyr_cov: 0.3
+  acc_cov: 0.5
+  gyr_cov_state: 1000
+  acc_cov_state: 500
+  bias_gyr_cov: 0.0001
+  bias_acc_cov: 0.0001
+  satu_gyr: 35.0
+  satu_acc: 30.0
 
 lio:
   max_iterations: 1

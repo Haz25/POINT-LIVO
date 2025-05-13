@@ -1,0 +1,101 @@
+[33mcommit 4fea20ba269c8d4cdb129c72a1bad98cca1c95e8[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Haz25 <hasbro425@postech.ac.kr>
+Date:   Tue May 13 10:14:31 2025 +0900
+
+    point-livo
+
+[33mcommit 0637fae74ef072d8c4ff853bf549145e1744cade[m
+Author: Yisheng Li <yli385@connect.hku.hk>
+Date:   Tue May 13 10:03:29 2025 +0900
+
+    point-livo
+
+[33mcommit 6289d034f2754c073ff5c20f62bbdeaa5ff79bfd[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Wed Mar 5 13:40:32 2025 +0800
+
+    [Enh] add point cloud undistortion in LO mode (issue #136).
+
+[33mcommit 162f843fa5c6a2903baa0d2d9bf16c1b287834c9[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Thu Feb 27 22:39:24 2025 +0800
+
+    [Feat] add support for MARS-LVIG dataset.
+
+[33mcommit 6be251b8ce16aa4c6488f5af47b7162e8797c0b9[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Sun Feb 23 01:31:25 2025 +0800
+
+    [Fix] fix issue #61: save PCD when img_en = 0.
+
+[33mcommit 0b790376de13a6a840e5340a19d1c55d265b8361[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Sat Feb 22 00:08:41 2025 +0800
+
+    [Enh] fix issue #100: add LO mode.
+
+[33mcommit 7951a2f69ac9431c27669fe87ef9944378524c65[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Sat Feb 15 23:31:11 2025 +0800
+
+    [Fix] fix issue #93: output point number equals 0.
+
+[33mcommit 8ad8f622688804e83a2f8f4912df95a7c9139b4f[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Sun Feb 9 23:15:45 2025 +0800
+
+    [Fix] fix bugs in issues #65, #69, #74, and #77.
+
+[33mcommit 986b4b1c2657fb35810c4caee4295407f3f48811[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Fri Jan 24 00:44:51 2025 +0800
+
+    [Release] code is now available!
+
+[33mcommit 91e4c64b5603690a8f886f4785acfbbe34dad108[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Sat Oct 5 15:43:47 2024 +0800
+
+    [Update] update the news and Bilibili link.
+
+[33mcommit 5b82e77666da4ab209d593c6524803cd20f2cc8b[m
+Author: Chunran Zheng <18846640555@163.com>
+Date:   Tue Aug 27 13:11:00 2024 +0800
+
+    [Update] update the arXiv paper link.
+
+[33mcommit 6b828b9a1698a2724249339ebbc12cff8c2a6a26[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Fri Aug 23 15:30:00 2024 +0800
+
+    [Update] update the revised supplementary material.
+
+[33mcommit 96d95127e8bd319837328ac57775953996b6c543[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Fri Jun 14 15:34:07 2024 +0800
+
+    [Add] add UAV auto-navigation related.
+
+[33mcommit e72a070f893bc70a37edd4eb6462f439bbe055b4[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Mon May 27 00:27:44 2024 +0800
+
+    [Add] add high-resolution screenshots of FAST-LIVO2 results.
+
+[33mcommit 64f225de226cd77f94b4566d4fcc93c01b9f1197[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Fri Apr 26 09:22:03 2024 +0800
+
+    [Update] update readme and supplementary material.
+
+[33mcommit fe0a6e3c3b27ff4ccb113e5d04264c01184869ab[m
+Author: xuankuzcr <18846640555@163.com>
+Date:   Mon Apr 22 21:09:44 2024 +0800
+
+    [Update] update the supplementary material.
+
+[33mcommit e147083dcdfe55534fd324069bdf82254166e896[m
+Author: Chunran Zheng <18846640555@163.com>
+Date:   Mon Apr 22 20:49:47 2024 +0800
+
+    Initial commit

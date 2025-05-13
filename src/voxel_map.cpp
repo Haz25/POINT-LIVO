@@ -32,19 +32,13 @@ void calcBodyCov(Eigen::Vector3d &pb, const float range_inc, const float degree_
   N << base_vector1(0), base_vector2(0), base_vector1(1), base_vector2(1), base_vector1(2), base_vector2(2);
   Eigen::Matrix<double, 3, 2> A = range * direction_hat * N;
   cov = direction * range_var * direction.transpose() + A * direction_var * A.transpose();
-
-  static int cnt = 0;
-  cnt ++;
-  //if (cnt % 500 == 0) cout << "1st cov:\n" << cov << endl;
-
+  /*
   double range2 = pb.squaredNorm();
   Eigen::Matrix3d wwT = pb * pb.transpose() / range2;
   double range_cov = range_inc * range_inc;
   double angle_cov = degree_inc * degree_inc; //pow(sin(DEG2RAD(degree_inc)), 2);
 	cov = range_cov * wwT + angle_cov * sqrt(range2) * (Eigen::Matrix3d::Identity() - wwT);
-  //cov = range_cov * wwT + angle_cov * range2 * (Eigen::Matrix3d::Identity() - wwT);
-
-  //if (cnt % 500 == 0) cout << "2nd cov:\n" << cov << endl;
+  */
 }
 
 void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config)
@@ -70,6 +64,7 @@ void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config)
   nh.param<double>("ivox/filter_size_map", filter_size_map, 0.1);
   nh.param<double>("ivox/match_s", match_s, 81);
   nh.param<int>("ivox/num_match_points", num_match_points, 5);
+  nh.param<int>("ivox/map_init_size", map_init_size, 10000);
   nh.param<float>("ivox/grid_resolution", ivox_options.resolution_, 0.2);
   nh.param<int>("ivox/nearby_type", ivox_nearby_type, 6);
   if (ivox_nearby_type == 0) {
@@ -635,7 +630,7 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
   }
 }
 
-void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx, int len, int &effect_feat_num) {
+void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int idx, int len, int &effect_feat_num) {
   
   vector<pointWithVar> tmp_pv_list_;
   for (size_t i = idx; i < idx + len; i++) {
@@ -659,8 +654,7 @@ void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx
 
   int rematch_num = 0;
   bool flg_EKF_inited, flg_EKF_converged, EKF_stop_flg = 0;
-  //for (int iterCount = 0; iterCount < config_setting_.max_iterations_; iterCount++) {
-  for (int iterCount = 0; iterCount < 1; iterCount++) {
+  for (int iterCount = 0; iterCount < config_setting_.max_iterations_; iterCount++) {
     double total_residual = 0.0;
     for (size_t i = idx; i < idx + len; i++) {
       pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
@@ -679,8 +673,7 @@ void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx
     }
     ptpl_list_.clear();
 
-    //BuildResidualList(tmp_pv_list_, ptpl_list_);
-    BuildResidual(tmp_pv_list_, ptpl_list_, idx);
+    BuildResidualList(tmp_pv_list_, ptpl_list_);
 
     for (int i = 0; i < ptpl_list_.size(); i++) {
       total_residual += fabs(ptpl_list_[i].dis_to_plane_);
@@ -716,9 +709,7 @@ void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx
         var = state_.rot * extR_ * ptpl_list_[i].body_cov_ * (state_.rot * extR_).transpose();
 
         double sigma_l = J_nq * ptpl_list_[i].plane_var_ * J_nq.transpose();
-        //R(i) = 0.001 + sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_;
-        //R(i) = sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_;
-        R(i) = noise_cov;
+        R(i) = 0.001 + sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_;
         
         V3D A(point_crossmat * state_.rot.transpose() * ptpl_list_[i].normal_);
         H.row(i) << VEC_FROM_ARRAY(A), ptpl_list_[i].normal_[0], ptpl_list_[i].normal_[1], ptpl_list_[i].normal_[2];
@@ -769,8 +760,86 @@ void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx
           (-point_crossmat) * state_.cov.block<3, 3>(0, 0) * (-point_crossmat).transpose() + state_.cov.block<3, 3>(3, 3);
     pv_list_[i].var = var;
   }
+}
 
-  //UpdateVoxelMap(tmp_pv_list_);
+void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx, int len) {
+  for (size_t i = idx; i < idx + len; i++) {
+    pointWithVar &pv = pv_list_[i];
+    V3D point_this(feats_down_body_->points[i].x, feats_down_body_->points[i].y, feats_down_body_->points[i].z);
+    pv.point_b = point_this;
+  }
+
+  int rematch_num = 0;
+  bool flg_EKF_inited, flg_EKF_converged, EKF_stop_flg = 0;
+  for (int iterCount = 0; iterCount < config_setting_.max_iterations_; iterCount++) {
+    for (size_t i = idx; i < idx + len; i++) {
+      pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
+      pv_list_[i].point_w << feats_down_world_->points[i].x, feats_down_world_->points[i].y, feats_down_world_->points[i].z;
+    }
+    ptpl_list_.clear();
+
+    BuildResidual(pv_list_, ptpl_list_, idx, len);
+
+    effct_feat_num_ = ptpl_list_.size();
+    if (effct_feat_num_ > 0) {
+      MatrixXd H(effct_feat_num_, 6);
+      MatrixXd PHT(DIM_STATE, effct_feat_num_);
+      MatrixXd HPHT(effct_feat_num_, effct_feat_num_);
+      MatrixXd K(DIM_STATE, effct_feat_num_);
+      VectorXd R(effct_feat_num_);
+      VectorXd z(effct_feat_num_);
+
+      for (int i = 0; i < effct_feat_num_; i++) {
+        auto &ptpl = ptpl_list_[i];
+        V3D point_this(ptpl.point_b_);
+        point_this = extR_ * point_this + extT_;
+        V3D point_body(ptpl.point_b_);
+        M3D point_crossmat;
+        point_crossmat << SKEW_SYM_MATRX(point_this);
+        
+        V3D A(point_crossmat * state_.rot.transpose() * ptpl_list_[i].normal_);
+        H.row(i) << VEC_FROM_ARRAY(A), ptpl_list_[i].normal_[0], ptpl_list_[i].normal_[1], ptpl_list_[i].normal_[2];
+        z(i) = -ptpl_list_[i].dis_to_plane_;
+        R(i) = noise_cov;
+      }
+      EKF_stop_flg = false;
+      flg_EKF_converged = false;
+      
+      PHT = state_.cov.block<DIM_STATE, 6>(0, 0) * H.transpose();
+      HPHT = H * PHT.topRows(6);
+      HPHT.diagonal() += R;
+      K = PHT * HPHT.inverse();
+
+      auto vec = state_propagat - state_;
+      VD(DIM_STATE)
+      solution = K * z + vec - K * H * vec.block<6, 1>(0, 0);
+      int minRow, minCol;
+      state_ += solution;
+      auto rot_add = solution.block<3, 1>(0, 0);
+      auto t_add = solution.block<3, 1>(3, 0);
+      if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }
+      V3D euler_cur = state_.rot.eulerAngles(2, 1, 0);
+
+      if (flg_EKF_converged || ((rematch_num == 0) && (iterCount == (config_setting_.max_iterations_ - 2)))) { rematch_num++; }
+
+      /*** Convergence Judgements and Covariance Update ***/
+      if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_ - 1))) {
+        /*** Covariance Update ***/
+        state_.cov = state_.cov - K * H * state_.cov.block<6, DIM_STATE>(0, 0);
+        position_last_ = state_.pos;
+        geoQuat_ = tf::createQuaternionMsgFromRollPitchYaw(euler_cur(0), euler_cur(1), euler_cur(2));
+
+        EKF_stop_flg = true;
+      }
+      if (EKF_stop_flg) break;
+    }
+  }
+
+  /*** update VoxelMapManager ***/
+  for (size_t i = idx; i < idx + len; i++) {
+    pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
+    pv_list_[i].point_w << feats_down_world_->points[i].x, feats_down_world_->points[i].y, feats_down_world_->points[i].z;
+  }
 }
 
 void VoxelMapManager::TransformLidar(const Eigen::Matrix3d rot, const Eigen::Vector3d t, const PointCloudXYZI::Ptr &input_cloud,
@@ -1413,17 +1482,13 @@ void VoxelMapManager::makePvList(StatesGroup &_state, const PointCloudXYZI::Ptr 
   }
 }
 
-void BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx) {
+void VoxelMapManager::BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len) {
 	Vector4f pabcd;
   Vector3d center;
-  for (int j = 0; j < pv_list.size(); j++) {
-    auto &pv = pv_list[j];
-    PointType point_world;
-    point_world.x = pv.point_w.x();
-    point_world.y = pv.point_w.y();
-    point_world.z = pv.point_w.z();
-
-    PointVector &points_near = Nearest_Points[idx + j];
+  for (int i = idx; i < idx + len; i++) {
+    auto &pv = pv_list[i];
+    PointType &point_world = feats_down_world_->points[i];
+    PointVector &points_near = Nearest_Points[i];
     ivox->GetClosestPoint(point_world, points_near, num_match_points);
 
     if (points_near.size() < num_match_points) {
@@ -1435,18 +1500,14 @@ void BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane>
         ptpl.point_b_ = pv.point_b;
         ptpl.point_w_ = pv.point_w;
         ptpl.normal_ << pabcd(0), pabcd(1), pabcd(2);
-        //cout << "normal: " << ptpl.normal_ << endl;
         ptpl.center_ = center;
-        //cout << "center: " << ptpl.center_ << endl;
         ptpl.d_ = pabcd(3);
         ptpl.dis_to_plane_ = (float) (ptpl.normal_.dot(pv.point_w) + ptpl.d_);
 
         float pd2 = ptpl.dis_to_plane_;
-        //cout << "pv.point_b.norm(): " << pv.point_b.norm() << endl;
-        //cout << "pd2 * pd2: " << pd2 * pd2 << endl;
         if (pv.point_b.norm() > match_s * pd2 * pd2) {
           ptpl.is_valid_ = true;
-          ptpl_list.emplace_back(ptpl);
+          ptpl_list_.emplace_back(ptpl);
         }
       }
     }

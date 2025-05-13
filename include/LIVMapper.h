@@ -35,9 +35,8 @@ public:
   void stateEstimationAndMapping();
   void handleVIO();
   void handleLIO();
-  void handleLIOwoEstimation();
   void handlePointLIO();
-  void handle();
+  void handleLIOCustom();
   void savePCD();
   void processImu();
   void stateEstimationIMU();
