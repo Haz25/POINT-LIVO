@@ -24,6 +24,7 @@ typedef Eigen::Matrix3f M3F;
 #define VD(a) Eigen::Matrix<double, (a), 1>
 #define MF(a, b) Eigen::Matrix<float, (a), (b)>
 #define VF(a) Eigen::Matrix<float, (a), 1>
+#define I3d Eigen::Matrix3d::Identity()
 
 struct Pose6D
 {

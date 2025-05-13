@@ -27,7 +27,7 @@ using namespace Sophus;
 
 #define print_line std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 #define G_m_s2 (9.81)   // Gravaty const in GuangDong/China
-#define DIM_STATE (19)  // Dimension of states (Let Dim(SO(3)) = 3)
+#define DIM_STATE (25)  // Dimension of states (Let Dim(SO(3)) = 3) plus omg and acc
 #define INIT_COV (0.01)
 #define SIZE_LARGE (500)
 #define SIZE_SMALL (100)
@@ -126,39 +126,45 @@ struct StatesGroup
 {
   StatesGroup()
   {
-    this->rot_end = M3D::Identity();
-    this->pos_end = V3D::Zero();
-    this->vel_end = V3D::Zero();
+    this->rot = M3D::Identity();
+    this->pos = V3D::Zero();
+    this->inv_expo_time = 1.0;
+    this->vel = V3D::Zero();
     this->bias_g = V3D::Zero();
     this->bias_a = V3D::Zero();
     this->gravity = V3D::Zero();
-    this->inv_expo_time = 1.0;
+    this->omg = V3D::Zero();
+    this->acc = V3D::Zero();
     this->cov = MD(DIM_STATE, DIM_STATE)::Identity() * INIT_COV;
     this->cov(6, 6) = 0.00001;
-    this->cov.block<9, 9>(10, 10) = MD(9, 9)::Identity() * 0.00001;
+    this->cov.block<15, 15>(10, 10) = MD(15, 15)::Identity() * 0.00001;
   };
 
   StatesGroup(const StatesGroup &b)
   {
-    this->rot_end = b.rot_end;
-    this->pos_end = b.pos_end;
-    this->vel_end = b.vel_end;
+    this->rot = b.rot;
+    this->pos = b.pos;
+    this->inv_expo_time = b.inv_expo_time;
+    this->vel = b.vel;
     this->bias_g = b.bias_g;
     this->bias_a = b.bias_a;
     this->gravity = b.gravity;
-    this->inv_expo_time = b.inv_expo_time;
+    this->omg = b.omg;  // added
+    this->acc = b.acc;  // added
     this->cov = b.cov;
   };
 
   StatesGroup &operator=(const StatesGroup &b)
   {
-    this->rot_end = b.rot_end;
-    this->pos_end = b.pos_end;
-    this->vel_end = b.vel_end;
+    this->rot = b.rot;
+    this->pos = b.pos;
+    this->inv_expo_time = b.inv_expo_time;
+    this->vel = b.vel;
     this->bias_g = b.bias_g;
     this->bias_a = b.bias_a;
     this->gravity = b.gravity;
-    this->inv_expo_time = b.inv_expo_time;
+    this->omg = b.omg;  // added
+    this->acc = b.acc;  // added
     this->cov = b.cov;
     return *this;
   };
@@ -166,58 +172,67 @@ struct StatesGroup
   StatesGroup operator+(const Matrix<double, DIM_STATE, 1> &state_add)
   {
     StatesGroup a;
-    a.rot_end = this->rot_end * Exp(state_add(0, 0), state_add(1, 0), state_add(2, 0));
-    a.pos_end = this->pos_end + state_add.block<3, 1>(3, 0);
+    a.rot = this->rot * Exp(state_add(0, 0), state_add(1, 0), state_add(2, 0));
+    a.pos = this->pos + state_add.block<3, 1>(3, 0);
     a.inv_expo_time = this->inv_expo_time + state_add(6, 0);
-    a.vel_end = this->vel_end + state_add.block<3, 1>(7, 0);
+    a.vel = this->vel + state_add.block<3, 1>(7, 0);
     a.bias_g = this->bias_g + state_add.block<3, 1>(10, 0);
     a.bias_a = this->bias_a + state_add.block<3, 1>(13, 0);
     a.gravity = this->gravity + state_add.block<3, 1>(16, 0);
-
+    a.omg = this->omg + state_add.block<3, 1>(19, 0);  // added
+    a.acc = this->acc + state_add.block<3, 1>(22, 0);  // added
     a.cov = this->cov;
     return a;
   };
 
   StatesGroup &operator+=(const Matrix<double, DIM_STATE, 1> &state_add)
   {
-    this->rot_end = this->rot_end * Exp(state_add(0, 0), state_add(1, 0), state_add(2, 0));
-    this->pos_end += state_add.block<3, 1>(3, 0);
+    this->rot = this->rot * Exp(state_add(0, 0), state_add(1, 0), state_add(2, 0));
+    this->pos += state_add.block<3, 1>(3, 0);
     this->inv_expo_time += state_add(6, 0);
-    this->vel_end += state_add.block<3, 1>(7, 0);
+    this->vel += state_add.block<3, 1>(7, 0);
     this->bias_g += state_add.block<3, 1>(10, 0);
     this->bias_a += state_add.block<3, 1>(13, 0);
     this->gravity += state_add.block<3, 1>(16, 0);
+    this->omg += state_add.block<3, 1>(19, 0);  // added
+    this->acc += state_add.block<3, 1>(22, 0);  // added
     return *this;
   };
 
   Matrix<double, DIM_STATE, 1> operator-(const StatesGroup &b)
   {
     Matrix<double, DIM_STATE, 1> a;
-    M3D rotd(b.rot_end.transpose() * this->rot_end);
+    M3D rotd(b.rot.transpose() * this->rot);
     a.block<3, 1>(0, 0) = Log(rotd);
-    a.block<3, 1>(3, 0) = this->pos_end - b.pos_end;
+    a.block<3, 1>(3, 0) = this->pos - b.pos;
     a(6, 0) = this->inv_expo_time - b.inv_expo_time;
-    a.block<3, 1>(7, 0) = this->vel_end - b.vel_end;
+    a.block<3, 1>(7, 0) = this->vel - b.vel;
     a.block<3, 1>(10, 0) = this->bias_g - b.bias_g;
     a.block<3, 1>(13, 0) = this->bias_a - b.bias_a;
     a.block<3, 1>(16, 0) = this->gravity - b.gravity;
+    a.block<3, 1>(19, 0) = this->omg - b.omg;  // added
+    a.block<3, 1>(22, 0) = this->acc - b.acc;  // added
     return a;
   };
 
   void resetpose()
   {
-    this->rot_end = M3D::Identity();
-    this->pos_end = V3D::Zero();
-    this->vel_end = V3D::Zero();
+    this->rot = M3D::Identity();
+    this->pos = V3D::Zero();
+    this->vel = V3D::Zero();
+    this->omg = V3D::Zero();
+    this->acc = V3D::Zero();
   }
 
-  M3D rot_end;                              // the estimated attitude (rotation matrix) at the end lidar point
-  V3D pos_end;                              // the estimated position at the end lidar point (world frame)
-  V3D vel_end;                              // the estimated velocity at the end lidar point (world frame)
+  M3D rot;                                  // the estimated attitude (rotation matrix)
+  V3D pos;                                  // the estimated position (world frame)
   double inv_expo_time;                     // the estimated inverse exposure time (no scale)
+  V3D vel;                                  // the estimated velocity (world frame)
   V3D bias_g;                               // gyroscope bias
   V3D bias_a;                               // accelerator bias
   V3D gravity;                              // the estimated gravity acceleration
+  V3D omg;                                  // the estimated angular velocity
+  V3D acc;                                  // the estimated acceleration (body frame)
   Matrix<double, DIM_STATE, DIM_STATE> cov; // states covariance
 };
 

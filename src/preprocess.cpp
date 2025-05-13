@@ -235,6 +235,7 @@ void Preprocess::l515_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
   // pub_func(pl_surf, pub_corn, msg->header.stamp);
 }
 
+
 void Preprocess::oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
 {
   pl_surf.clear();
@@ -335,6 +336,90 @@ void Preprocess::oust64_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
 
 #define MAX_LINE_NUM 64
 
+void Preprocess::velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg) {
+  pl_surf.clear();
+  pl_corn.clear();
+  pl_full.clear();
+
+  pcl::PointCloud<velodyne_ros::Point> pl_orig;
+  pcl::fromROSMsg(*msg, pl_orig);
+  int plsize = pl_orig.points.size();
+  pl_surf.reserve(plsize);
+
+  // define a lambda function for the comparison
+  auto comparePoints = [](const velodyne_ros::Point& a, const velodyne_ros::Point& b) -> bool {
+    return a.time < b.time;
+  };
+  
+  // sort the points using the comparison function
+  std::sort(pl_orig.points.begin(), pl_orig.points.end(), comparePoints);
+
+  float first_point_time = pl_orig.points[0].time;
+
+  if (feature_enabled) {
+    for (int i = 0; i < N_SCANS; i++) {
+      pl_buff[i].clear();
+      pl_buff[i].reserve(plsize);
+    }
+
+    for (int i = 0; i < plsize; i++) {
+      PointType added_pt;
+      added_pt.normal_x = 0;
+      added_pt.normal_y = 0;
+      added_pt.normal_z = 0;
+      int layer = pl_orig.points[i].ring;
+      if (layer >= N_SCANS) continue;
+      added_pt.x = pl_orig.points[i].x;
+      added_pt.y = pl_orig.points[i].y;
+      added_pt.z = pl_orig.points[i].z;
+      added_pt.intensity = pl_orig.points[i].intensity;
+      added_pt.curvature = (pl_orig.points[i].time - first_point_time) * 1000.0; // units: ms
+
+      pl_buff[layer].points.push_back(added_pt);
+    }
+
+    for (int j = 0; j < N_SCANS; j++) {
+      PointCloudXYZI &pl = pl_buff[j];
+      int linesize = pl.size();
+      if (linesize < 2) continue;
+      vector<orgtype> &types = typess[j];
+      types.clear();
+      types.resize(linesize);
+      linesize--;
+      for (uint i = 0; i < linesize; i++) {
+        types[i].range = sqrt(pl[i].x * pl[i].x + pl[i].y * pl[i].y);
+        vx = pl[i].x - pl[i + 1].x;
+        vy = pl[i].y - pl[i + 1].y;
+        vz = pl[i].z - pl[i + 1].z;
+        types[i].dista = vx * vx + vy * vy + vz * vz;
+      }
+      types[linesize].range = sqrt(pl[linesize].x * pl[linesize].x + pl[linesize].y * pl[linesize].y);
+      give_feature(pl, types);
+    }
+  }
+  else {
+    for (int i = 0; i < plsize; i++) {
+      PointType added_pt;
+
+      added_pt.normal_x = 0;
+      added_pt.normal_y = 0;
+      added_pt.normal_z = 0;
+      added_pt.x = pl_orig.points[i].x;
+      added_pt.y = pl_orig.points[i].y;
+      added_pt.z = pl_orig.points[i].z;
+      added_pt.intensity = pl_orig.points[i].intensity;
+      added_pt.curvature = (pl_orig.points[i].time - first_point_time) * 1000.0;
+
+      if (i % point_filter_num == 0) {
+        if (added_pt.x * added_pt.x + added_pt.y * added_pt.y + added_pt.z * added_pt.z > blind_sqr) {
+          pl_surf.points.push_back(added_pt);
+        }
+      }
+    }
+  }
+}
+
+/*
 void Preprocess::velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
 {
   pl_surf.clear();
@@ -352,7 +437,7 @@ void Preprocess::velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
   float yaw_last[MAX_LINE_NUM] = {0.0};  // yaw of last scan point
   float time_last[MAX_LINE_NUM] = {0.0}; // last offset time
 
-  if (pl_orig.points[plsize - 1].t > 0) { given_offset_time = true; }
+  if (0) { given_offset_time = true; }
   else
   {
     given_offset_time = false;
@@ -390,7 +475,7 @@ void Preprocess::velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
       added_pt.y = pl_orig.points[i].y;
       added_pt.z = pl_orig.points[i].z;
       added_pt.intensity = pl_orig.points[i].intensity;
-      added_pt.curvature = pl_orig.points[i].t / 1000.0; // units: ms
+      added_pt.curvature = pl_orig.points[i].time / 1000.0; // units: ms
 
       if (!given_offset_time)
       {
@@ -453,7 +538,7 @@ void Preprocess::velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
       added_pt.y = pl_orig.points[i].y;
       added_pt.z = pl_orig.points[i].z;
       added_pt.intensity = pl_orig.points[i].intensity;
-      added_pt.curvature = pl_orig.points[i].t / 1000.0;
+      added_pt.curvature = pl_orig.points[i].time / 1000.0;
 
       if (!given_offset_time)
       {
@@ -477,31 +562,21 @@ void Preprocess::velodyne_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
 
         if (added_pt.curvature < time_last[layer]) added_pt.curvature += 360.0 / omega_l;
 
-        // added_pt.curvature = pl_orig.points[i].t;
-
         yaw_last[layer] = yaw_angle;
         time_last[layer] = added_pt.curvature;
       }
 
-      // if(i==(plsize-1))  printf("index: %d layer: %d, yaw: %lf, offset-time:
-      // %lf, condition: %d\n", i, layer, yaw_angle, added_pt.curvature,
-      // prints);
       if (i % point_filter_num == 0)
       {
         if (added_pt.x * added_pt.x + added_pt.y * added_pt.y + added_pt.z * added_pt.z > blind_sqr)
         {
           pl_surf.points.push_back(added_pt);
-          // printf("time mode: %d time: %d \n", given_offset_time,
-          // pl_orig.points[i].t);
         }
       }
     }
   }
-  // pub_func(pl_surf, pub_full, msg->header.stamp);
-  // pub_func(pl_surf, pub_surf, msg->header.stamp);
-  // pub_func(pl_surf, pub_corn, msg->header.stamp);
 }
-
+*/
 void Preprocess::Pandar128_handler(const sensor_msgs::PointCloud2::ConstPtr &msg)
 {
   pl_surf.clear();

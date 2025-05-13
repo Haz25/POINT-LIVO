@@ -14,6 +14,7 @@ which is included as part of this source code package.
 #define VOXEL_MAP_H_
 
 #include "common_lib.h"
+#include "IMU_Processing.h"
 #include <Eigen/Dense>
 #include <fstream>
 #include <math.h>
@@ -26,6 +27,19 @@ which is included as part of this source code package.
 #include <unordered_map>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <ivox/ivox3d.h>
+
+using IVoxType = faster_lio::IVox<3, faster_lio::IVoxNodeType::DEFAULT, PointType>;
+
+double match_s = 81;
+int ivox_nearby_type = 0;
+int num_match_points = 5;
+double plane_thr = 0.0025;
+double filter_size_map = 0.1;
+double noise_cov = 0.01;
+std::shared_ptr<IVoxType> ivox = nullptr;
+IVoxType::Options ivox_options;
+std::vector<PointVector> Nearest_Points;
 
 #define VOXELMAP_HASH_P 116101
 #define VOXELMAP_MAX_N 10000000000
@@ -182,8 +196,6 @@ public:
   VoxelOctoTree *Insert(const pointWithVar &pv);
 };
 
-void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config);
-
 class VoxelMapManager
 {
 public:
@@ -227,8 +239,11 @@ public:
   };
 
   void StateEstimation(StatesGroup &state_propagat);
+  void StateEstimationCustom(StatesGroup &state_propagat, int idx, int k, int &effect_feat_num);
   void TransformLidar(const Eigen::Matrix3d rot, const Eigen::Vector3d t, const PointCloudXYZI::Ptr &input_cloud,
                       pcl::PointCloud<pcl::PointXYZI>::Ptr &trans_cloud);
+  void pointBodyToWorld(StatesGroup &_state, const PointType &pi, PointType &po);
+  void makePvList(StatesGroup &_state, const PointCloudXYZI::Ptr &feats_down_body, std::vector<pointWithVar> &pv_list);
 
   void BuildVoxelMap();
   V3F RGBFromVoxel(const V3D &input_point);
@@ -236,14 +251,18 @@ public:
   void UpdateVoxelMap(const std::vector<pointWithVar> &input_points);
 
   void BuildResidualListOMP(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list);
+  void BuildResidualList(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list);
 
   void build_single_residual(pointWithVar &pv, const VoxelOctoTree *current_octo, const int current_layer, bool &is_sucess, double &prob,
+                             PointToPlane &single_ptpl);
+  void build_single_residual2(pointWithVar &pv, const VoxelOctoTree *current_octo, const int current_layer, bool &is_sucess, double &prob,
                              PointToPlane &single_ptpl);
 
   void pubVoxelMap();
 
   void mapSliding();
-  void clearMemOutOfMap(const int& x_max,const int& x_min,const int& y_max,const int& y_min,const int& z_max,const int& z_min );
+  void clearMemOutOfMap(const int& x_max, const int& x_min, const int& y_max, const int& y_min, const int& z_max, const int& z_min );
+
 
 private:
   void GetUpdatePlane(const VoxelOctoTree *current_octo, const int pub_max_voxel_layer, std::vector<VoxelPlane> &plane_list);
@@ -255,5 +274,11 @@ private:
   void mapJet(double v, double vmin, double vmax, uint8_t &r, uint8_t &g, uint8_t &b);
 };
 typedef std::shared_ptr<VoxelMapManager> VoxelMapManagerPtr;
+
+void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config);
+
+void BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx);
+bool esti_plane(Vector4f &pca_result, Vector3d &center, const PointVector &point, const double threshold);
+void MapIncremental(PointCloudXYZI::Ptr feats_down_world);
 
 #endif // VOXEL_MAP_H_

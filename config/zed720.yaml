@@ -1,0 +1,108 @@
+# rga data
+common:
+  img_topic: "/zed2/zed_node/left/image_rect_color"
+  lid_topic: "/velodyne_points"
+  imu_topic: "/zed2/zed_node/imu/data"
+  img_en: 1
+  lidar_en: 1
+  ros_driver_bug_fix: false
+
+extrin_calib:
+  # transform lidar to imu
+  extrinsic_T: [-0.087367, -0.0290627, 0.017859]
+  extrinsic_R: [0.998914, -0.005948, -0.046201,
+                0.006444,  0.999923,  0.010613,
+                0.046134, -0.010899,  0.998876]          
+
+  # transform lidar to camera
+  Rcl: [-0.00398903, -0.999991, 0.00143636,
+        -0.0447629, -0.00125637, -0.998997,
+        0.99899, -0.00404933, -0.0447574]
+  Pcl: [0.0422829, -0.0482746, -0.0677389] #[0.0583342, 0.000483011, -0.054658]
+  #Rcl: [0.00975916, -0.99981, 0.0168986,
+  #      -0.0483478, -0.0173514, -0.99868,
+  #      0.998783, 0.00892927, -0.0485079]
+  #Pcl: [0.0118853, -0.0257922, -0.0265063]
+  #Rcl: [-0.00438036, -0.999989, 0.0018836,
+  #      -0.044617, -0.0016863, -0.999003,
+  #       0.998995, -0.00446003, -0.0446091]
+  #Pcl: [0.0422829, -0.0382746, -0.0877389]
+  #Rcl: [-0.0090107, -0.999913,  0.00965803,
+  #      -0.0420116, -0.00927135, -0.999074,
+  #       0.999076, -0.0094081, -0.0419244]
+  #Pcl: [0.0375008,-0.0211946,-0.0563011]
+
+time_offset: 
+  imu_time_offset: -0.118365567
+  img_time_offset: 0.118365567
+  exposure_time_init: 0.0
+
+preprocess:
+  point_filter_num: 1
+  filter_en: true
+  filter_size_surf: 0.1
+  lidar_type: 2
+  scan_line: 16
+  blind: 0.2
+
+vio:
+  max_iterations: 5
+  outlier_threshold: 1000 # 78 100 156 #100 200 500 700 infinite
+  img_point_cov: 100 # 100 1000 
+  patch_size: 8
+  patch_pyrimid_level: 4
+  normal_en: true
+  raycast_en: false
+  inverse_composition_en: false
+  exposure_estimate_en: true
+  inv_expo_cov: 0.1
+
+imu:
+  imu_en: true
+  imu_int_frame: 30
+  vel_cov: 10
+  gyr_cov: 0.3 # 0.5
+  acc_cov: 0.5 # 0.2
+  gyr_cov_state: 0.1
+  acc_cov_state: 0.1
+  bias_gyr_cov: 0.0001
+  bias_acc_cov: 0.0001
+
+lio:
+  max_iterations: 5
+  dept_err: 0.02
+  beam_err: 0.05
+  min_eigen_value: 0.0025 # 0.005
+  voxel_size: 0.25
+  max_layer: 3
+  max_points_num: 50
+  layer_init_num: [5, 5, 5, 5, 5]
+
+local_map:  
+  map_sliding_en: false
+  half_map_size: 100
+  sliding_thresh: 8
+
+uav:
+  imu_rate_odom: false
+  gravity_align_en: false
+
+publish:
+  dense_map_en: true
+  pub_effect_point_en: true
+  pub_plane_en: false
+  pub_scan_num: 1
+  blind_rgb_points: 0.0
+  pub_cut_num: 10
+
+evo:
+  seq_name: "rga"
+  pose_output_en: false
+
+pcd_save:
+  pcd_save_en: true
+  colmap_output_en: false # need to set interval = -1
+  filter_size_pcd: 0.1
+  interval: -1
+  # how many LiDAR frames saved in each pcd file;
+  # -1 : all frames will be saved in ONE pcd file, may lead to memory crash when having too much frames.

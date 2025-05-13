@@ -1425,8 +1425,8 @@ void VIOManager::updateStateInverse(cv::Mat img, int level)
     if (has_ref_patch_cache == false) precomputeReferencePatches(level);
     int n_meas = 0;
     float error = 0.0;
-    M3D Rwi(state->rot_end);
-    V3D Pwi(state->pos_end);
+    M3D Rwi(state->rot);
+    V3D Pwi(state->pos);
     P_wi_hat << SKEW_SYM_MATRX(Pwi);
     Rcw = Rci * Rwi.transpose();
     Pcw = -Rci * Rwi.transpose() * Pwi + Pci;
@@ -1537,8 +1537,8 @@ void VIOManager::updateState(cv::Mat img, int level)
   {
     double t1 = omp_get_wtime();
 
-    M3D Rwi(state->rot_end);
-    V3D Pwi(state->pos_end);
+    M3D Rwi(state->rot);
+    V3D Pwi(state->pos);
     Rcw = Rci * Rwi.transpose();
     Pcw = -Rci * Rwi.transpose() * Pwi + Pci;
     Jdp_dt = Rci * Rwi.transpose();
@@ -1689,8 +1689,8 @@ void VIOManager::updateState(cv::Mat img, int level)
 
 void VIOManager::updateFrameState(StatesGroup state)
 {
-  M3D Rwi(state.rot_end);
-  V3D Pwi(state.pos_end);
+  M3D Rwi(state.rot);
+  V3D Pwi(state.pos);
   Rcw = Rci * Rwi.transpose();
   Pcw = -Rci * Rwi.transpose() * Pwi + Pci;
   new_frame_->T_f_w_ = SE3(Rcw, Pcw);

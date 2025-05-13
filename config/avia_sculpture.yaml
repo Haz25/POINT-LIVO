@@ -1,3 +1,4 @@
+# Red_Sculpture
 common:
   img_topic: "/left_camera/image"
   lid_topic: "/livox/lidar"
@@ -8,11 +9,13 @@ common:
 
 extrin_calib:
   extrinsic_T: [0.04165, 0.02326, -0.0284]
-  extrinsic_R: [1, 0, 0, 0, 1, 0, 0, 0, 1]
-  Rcl: [0.00610193,-0.999863,-0.0154172,
-        -0.00615449,0.0153796,-0.999863,
-        0.999962,0.00619598,-0.0060598] 
-  Pcl: [0.0194384, 0.104689,-0.0251952]
+  extrinsic_R: [1, 0, 0, 
+                0, 1, 0, 
+                0, 0, 1]
+  Rcl: [-0.00668,-0.99965,-0.02543,
+        -0.01151,0.02550,-0.99961,
+         0.99991,-0.00638,-0.01168]
+  Pcl: [-0.00077, 0.04809, -0.00133]
 
 time_offset: 
   imu_time_offset: 0.0
@@ -21,7 +24,7 @@ time_offset:
 
 preprocess:
   point_filter_num: 1
-  filter_size_surf: 0.1
+  filter_size_surf: 0.4
   lidar_type: 1 # Livox Avia LiDAR
   scan_line: 6
   blind: 0.8
@@ -66,14 +69,15 @@ uav:
   gravity_align_en: false
 
 publish:
-  dense_map_en: true
-  pub_effect_point_en: false 
+  dense_map_en: false
+  pub_effect_point_en: true 
   pub_plane_en: false
   pub_scan_num: 1
   blind_rgb_points: 0.0
+  pub_always: false
 
 evo:
-  seq_name: "CBD_Building_01"
+  seq_name: "HKU_Campus"
   pose_output_en: false
 
 pcd_save:
