@@ -46,6 +46,7 @@ std::vector<PointVector> Nearest_Points;
 #define VOXELMAP_MAX_N 10000000000
 
 static int voxel_plane_id = 0;
+double T0, T_down, T1, T2, T3, T4;
 
 typedef struct VoxelMapConfig
 {
@@ -240,7 +241,8 @@ public:
   };
 
   void StateEstimation(StatesGroup &state_propagat);
-  void StateEstimationCustom(StatesGroup &state_propagat, int idx, int k, int &effect_feat_num);
+  void StateEstimationPointLIO(StatesGroup &state_propagat, int idx, int len, int &effect_feat_num);
+  void StateEstimationCustom(StatesGroup &state_propagat, int idx, int len);
   void TransformLidar(const Eigen::Matrix3d rot, const Eigen::Vector3d t, const PointCloudXYZI::Ptr &input_cloud,
                       pcl::PointCloud<pcl::PointXYZI>::Ptr &trans_cloud);
   void pointBodyToWorld(StatesGroup &_state, const PointType &pi, PointType &po);
@@ -253,6 +255,7 @@ public:
 
   void BuildResidualListOMP(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list);
   void BuildResidualList(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list);
+  void BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len);
 
   void build_single_residual(pointWithVar &pv, const VoxelOctoTree *current_octo, const int current_layer, bool &is_sucess, double &prob,
                              PointToPlane &single_ptpl);
@@ -278,7 +281,6 @@ typedef std::shared_ptr<VoxelMapManager> VoxelMapManagerPtr;
 
 void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config);
 
-void BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx);
 bool esti_plane(Vector4f &pca_result, Vector3d &center, const PointVector &point, const double threshold);
 void MapIncremental(PointCloudXYZI::Ptr feats_down_world);
 

@@ -75,14 +75,8 @@ public:
   void Process2(LidarMeasureGroup &lidar_meas, StatesGroup &stat, PointCloudXYZI::Ptr cur_pcl_un_, 
                 vector<pointWithVar> &_pv_list, VoxelMapManagerPtr &voxelmap_manager);
   void UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);
-  void UndistortPcl2(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);
-  void UndistortPcl3(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, 
-                     vector<pointWithVar> &_pv_list, VoxelMapManagerPtr& voxelmap_manager);
-  void UndistortPcl4(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, 
-                     vector<pointWithVar> &_pv_list, VoxelMapManagerPtr& voxelmap_manager);
-  void UndistortPcl5(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, 
-                     vector<pointWithVar> &_pv_list, VoxelMapManagerPtr& voxelmap_manager);
-  void UndistortPclPointLIO(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);                 
+  void UndistortPclPointLIO(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);  
+  void UndistortPclCustom(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);               
   //void processImu(StatesGroup &stat);
   void Predict(StatesGroup &stat, double dt, bool predict_state, bool prop_cov);
   void StateEstimationIMU(StatesGroup &stat);
