@@ -28,14 +28,7 @@ extrin_calib:
 
 time_offset:
   imu_time_offset: 0.0
-  #imu_time_offset: -0.10296341  # zed2imu - avia 1
-  #imu_time_offset: -0.10057550  # zed2imu - avia 2
-  #imu_time_offset: -0.04722450  # avia_imu - avia lidar 1
-  #imu_time_offset: -0.04142456  # avia_imu - avia lidar 2
-  #img_time_offset: 0.10296341   # zed2camera - avia 1
   img_time_offset: 0.0
-  #img_time_offset: 0.10057550  # zed2camera - avia 1
-  #img_time_offset: 0.10365848
   exposure_time_init: 0.0
 
 preprocess:
@@ -62,16 +55,16 @@ vio:
 imu:
   imu_en: true
   imu_int_frame: 30
-  acc_cov: 0.5 # 0.2
-  gyr_cov: 0.3 # 0.5
-  b_acc_cov: 0.0001 # 0.1
-  b_gyr_cov: 0.0001 # 0.1
+  acc_cov: 0.5
+  gyr_cov: 0.3
+  b_acc_cov: 0.0001
+  b_gyr_cov: 0.0001
 
 lio:
-  max_iterations: 1
+  max_iterations: 5
   dept_err: 0.02
   beam_err: 0.05
-  min_eigen_value: 0.0025 # 0.005
+  min_eigen_value: 0.0025
   sigma_num: 3
   voxel_size: 0.5
   max_layer: 3
@@ -85,6 +78,7 @@ ivox:
   num_match_points: 5
   filter_size_map: 0.1
   noise_cov: 0.01
+  map_init_size: 10000
 
 local_map:  
   map_sliding_en: false

@@ -70,6 +70,7 @@ void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config)
   nh.param<double>("ivox/filter_size_map", filter_size_map, 0.1);
   nh.param<double>("ivox/match_s", match_s, 81);
   nh.param<int>("ivox/num_match_points", num_match_points, 5);
+  nh.param<int>("ivox/map_init_size", map_init_size, 10000);
   nh.param<float>("ivox/grid_resolution", ivox_options.resolution_, 0.2);
   nh.param<int>("ivox/nearby_type", ivox_nearby_type, 6);
   if (ivox_nearby_type == 0) {

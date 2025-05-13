@@ -1687,8 +1687,8 @@ void ImuProcess::UndistortPcl5(LidarMeasureGroup &lidar_meas, StatesGroup &state
     cout << "feats size: " << feats_size << endl;
     cout << "feats down size: " << feats_down_size << endl;
 
-    static int init_size = 0;
-    if (init_size < 2000) {
+    static int cur_size = 0;
+    if (cur_size < map_init_size) {
       ivox = std::make_shared<IVoxType>(ivox_options);
       PointCloudXYZI::Ptr feats_init_world(new PointCloudXYZI());
       feats_init_world->resize(feats_size);
@@ -1706,9 +1706,9 @@ void ImuProcess::UndistortPcl5(LidarMeasureGroup &lidar_meas, StatesGroup &state
       }
 
       ivox->AddPoints(feats_init_world->points);
-      init_size += feats_size;
+      cur_size += feats_size;
 
-      if (init_size >= 2000) {
+      if (cur_size >= map_init_size) {
         cout << "map initialized." << endl;
         cout << "ivox size: " << ivox->NumValidGrids() << endl;
       }

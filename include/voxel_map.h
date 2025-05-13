@@ -34,6 +34,7 @@ using IVoxType = faster_lio::IVox<3, faster_lio::IVoxNodeType::DEFAULT, PointTyp
 double match_s = 81;
 int ivox_nearby_type = 0;
 int num_match_points = 5;
+int map_init_size = 10000;
 double plane_thr = 0.0025;
 double filter_size_map = 0.1;
 double noise_cov = 0.01;

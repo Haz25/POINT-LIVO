@@ -83,6 +83,7 @@ ivox:
   num_match_points: 5
   filter_size_map: 0.1
   noise_cov: 0.01
+  map_init_size: 10000
 
 local_map:  
   map_sliding_en: false
