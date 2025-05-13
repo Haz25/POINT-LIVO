@@ -4,7 +4,7 @@ common:
   lid_topic: "/livox/lidar"
   imu_topic: "/livox/imu"
   #imu_topic: "/zed2/zed_node/imu/data"
-  img_en: 0
+  img_en: 1
   lidar_en: 1
   ros_driver_bug_fix: false
 
