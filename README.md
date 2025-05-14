@@ -84,7 +84,7 @@ Clone the repository and catkin_make:
 
 ```
 cd ~/catkin_ws/src
-git clone https://github.com/hku-mars/FAST-LIVO2
+git clone https://github.com/Haz25/POINT-LIVO
 cd ../
 catkin_make
 source ~/catkin_ws/devel/setup.bash
