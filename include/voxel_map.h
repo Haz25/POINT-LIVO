@@ -53,12 +53,14 @@ typedef struct VoxelMapConfig
   double max_voxel_size_;
   int max_layer_;
   int max_iterations_;
+  int max_iterations_point_;
   std::vector<int> layer_init_num_;
   int max_points_num_;
   double planner_threshold_;
   double beam_err_;
   double dept_err_;
   double sigma_num_;
+  double sigma_num_point_;
   bool is_pub_plane_map_;
 
   // config of local map sliding
@@ -241,8 +243,9 @@ public:
   };
 
   void StateEstimation(StatesGroup &state_propagat);
-  void StateEstimationPointLIO(StatesGroup &state_propagat, int idx, int len, int &effect_feat_num);
+  void StateEstimationPointLIO(StatesGroup &state_propagat, int idx, int len);
   void StateEstimationCustom(StatesGroup &state_propagat, int idx, int len);
+  void StateEstimationCustom2(StatesGroup &state_propagat, int idx, int len);
   void TransformLidar(const Eigen::Matrix3d rot, const Eigen::Vector3d t, const PointCloudXYZI::Ptr &input_cloud,
                       pcl::PointCloud<pcl::PointXYZI>::Ptr &trans_cloud);
   void pointBodyToWorld(StatesGroup &_state, const PointType &pi, PointType &po);
@@ -253,12 +256,13 @@ public:
 
   void UpdateVoxelMap(const std::vector<pointWithVar> &input_points);
 
-  void BuildResidualListOMP(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list);
+  void BuildResidualListOMP(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, double sigma_num);
   void BuildResidualList(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list);
   void BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len);
+  void BuildResidual2(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len);
 
   void build_single_residual(pointWithVar &pv, const VoxelOctoTree *current_octo, const int current_layer, bool &is_sucess, double &prob,
-                             PointToPlane &single_ptpl);
+                             PointToPlane &single_ptpl, double sigma_num);
   void build_single_residual2(pointWithVar &pv, const VoxelOctoTree *current_octo, const int current_layer, bool &is_sucess, double &prob,
                              PointToPlane &single_ptpl);
 

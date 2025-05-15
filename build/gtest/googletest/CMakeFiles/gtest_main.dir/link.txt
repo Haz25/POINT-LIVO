@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -pthread -fexceptions -O3 -DNDEBUG -O3 -march=native -mtune=native -funroll-loops -shared -Wl,-soname,libgtest_main.so -o ../lib/libgtest_main.so CMakeFiles/gtest_main.dir/src/gtest_main.cc.o  -Wl,-rpath,/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/gtest/lib ../lib/libgtest.so -lpthread 

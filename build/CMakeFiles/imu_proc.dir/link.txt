@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -pthread -fexceptions  -O3 -DNDEBUG -O3 -march=native -mtune=native -funroll-loops -shared -Wl,-soname,libimu_proc.so -o devel/lib/libimu_proc.so CMakeFiles/imu_proc.dir/src/IMU_Processing.cpp.o 

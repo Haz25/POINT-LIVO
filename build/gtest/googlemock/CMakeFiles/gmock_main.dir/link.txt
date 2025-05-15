@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -pthread -fexceptions -O3 -DNDEBUG -O3 -march=native -mtune=native -funroll-loops -shared -Wl,-soname,libgmock_main.so -o ../lib/libgmock_main.so CMakeFiles/gmock_main.dir/src/gmock_main.cc.o  -Wl,-rpath,/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/gtest/lib ../lib/libgmock.so ../lib/libgtest.so -lpthread 

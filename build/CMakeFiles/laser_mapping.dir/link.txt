@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -pthread -fexceptions  -O3 -DNDEBUG -O3 -march=native -mtune=native -funroll-loops -shared -Wl,-soname,liblaser_mapping.so -o devel/lib/liblaser_mapping.so CMakeFiles/laser_mapping.dir/src/LIVMapper.cpp.o 

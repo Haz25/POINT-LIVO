@@ -3,7 +3,7 @@ common:
   img_topic: "/zed2/zed_node/left/image_rect_color"
   lid_topic: "/velodyne_points"
   imu_topic: "/zed2/zed_node/imu/data"
-  img_en: 0
+  img_en: 1
   lidar_en: 1
   ros_driver_bug_fix: false
 
@@ -46,7 +46,7 @@ vio:
   img_point_cov: 100 # 100 1000 
   patch_size: 8
   patch_pyrimid_level: 4
-  normal_en: true
+  normal_en: false
   raycast_en: false
   inverse_composition_en: false
   exposure_estimate_en: true
@@ -66,22 +66,24 @@ imu:
   satu_acc: 30.0
 
 lio:
-  max_iterations: 1  # point-lio: 1-2, lio: 4-5
+  max_iterations: 1  # fast-livo
+  max_iterations_point: 1 # point-lio
   dept_err: 0.02  # 0.02
   beam_err: 0.05  # 0.05
   min_eigen_value: 0.0025 # 0.0025
-  sigma_num: 3
+  sigma_num: 3    # fast-livo
+  sigma_num_point: 1   # point-lio
   voxel_size: 0.5
   max_layer: 3
   max_points_num: 50
   layer_init_num: [5, 5, 5, 5, 5]
 
 ivox:
-  grid_resolution: 0.5
+  grid_resolution: 0.4
   nearby_type: 0
   match_s: 300
   num_match_points: 5
-  filter_size_map: 0.1
+  filter_size_map: 0.2
   noise_cov: 0.01
   map_init_size: 10000
 
@@ -95,7 +97,7 @@ uav:
   gravity_align_en: false
 
 publish:
-  dense_map_en: false
+  dense_map_en: true
   pub_effect_point_en: true
   pub_plane_en: false
   pub_scan_num: 1

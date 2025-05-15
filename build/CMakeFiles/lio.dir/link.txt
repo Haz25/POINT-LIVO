@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -pthread -fexceptions  -O3 -DNDEBUG -O3 -march=native -mtune=native -funroll-loops -shared -Wl,-soname,liblio.so -o devel/lib/liblio.so CMakeFiles/lio.dir/src/voxel_map.cpp.o 

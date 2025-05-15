@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -pthread -fexceptions  -O3 -DNDEBUG -O3 -march=native -mtune=native -funroll-loops -shared -Wl,-soname,libpre.so -o devel/lib/libpre.so CMakeFiles/pre.dir/src/preprocess.cpp.o 

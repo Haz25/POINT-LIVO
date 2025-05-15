@@ -32,6 +32,7 @@ void calcBodyCov(Eigen::Vector3d &pb, const float range_inc, const float degree_
   N << base_vector1(0), base_vector2(0), base_vector1(1), base_vector2(1), base_vector1(2), base_vector2(2);
   Eigen::Matrix<double, 3, 2> A = range * direction_hat * N;
   cov = direction * range_var * direction.transpose() + A * direction_var * A.transpose();
+  
   /*
   double range2 = pb.squaredNorm();
   Eigen::Matrix3d wwT = pb * pb.transpose() / range2;
@@ -49,11 +50,13 @@ void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config)
   nh.param<double>("lio/voxel_size", voxel_config.max_voxel_size_, 0.5);
   nh.param<double>("lio/min_eigen_value", voxel_config.planner_threshold_, 0.01);
   nh.param<double>("lio/sigma_num", voxel_config.sigma_num_, 3);
+  nh.param<double>("lio/sigma_num_point", voxel_config.sigma_num_point_, 1);
   nh.param<double>("lio/beam_err", voxel_config.beam_err_, 0.02);
   nh.param<double>("lio/dept_err", voxel_config.dept_err_, 0.05);
   nh.param<vector<int>>("lio/layer_init_num", voxel_config.layer_init_num_, vector<int>{5,5,5,5,5});
   nh.param<int>("lio/max_points_num", voxel_config.max_points_num_, 50);
   nh.param<int>("lio/max_iterations", voxel_config.max_iterations_, 5);
+  nh.param<int>("lio/max_iterations_point", voxel_config.max_iterations_point_, 5);
 
   nh.param<bool>("local_map/map_sliding_en", voxel_config.map_sliding_en, false);
   nh.param<int>("local_map/half_map_size", voxel_config.half_map_size, 100);
@@ -420,7 +423,7 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
 
     // double t1 = omp_get_wtime();
 
-    BuildResidualListOMP(pv_list_, ptpl_list_);
+    BuildResidualListOMP(pv_list_, ptpl_list_, config_setting_.sigma_num_);
 
     // build_residual_time += omp_get_wtime() - t1;
 
@@ -630,9 +633,10 @@ void VoxelMapManager::StateEstimation(StatesGroup &state_propagat)
   }
 }
 
-void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int idx, int len, int &effect_feat_num) {
+void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int idx, int len) {
   
   vector<pointWithVar> tmp_pv_list_;
+  tmp_pv_list_.reserve(len);
   for (size_t i = idx; i < idx + len; i++) {
     pointWithVar pv;
     V3D point_this(feats_down_body_->points[i].x, feats_down_body_->points[i].y, feats_down_body_->points[i].z);
@@ -653,8 +657,12 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
   }
 
   int rematch_num = 0;
+  MD(DIM_STATE, DIM_STATE) G, H_T_H, I_STATE;
+  G.setZero();
+  H_T_H.setZero();
+  I_STATE.setIdentity(); 
   bool flg_EKF_inited, flg_EKF_converged, EKF_stop_flg = 0;
-  for (int iterCount = 0; iterCount < config_setting_.max_iterations_; iterCount++) {
+  for (int iterCount = 0; iterCount < config_setting_.max_iterations_point_; iterCount++) {
     double total_residual = 0.0;
     for (size_t i = idx; i < idx + len; i++) {
       pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
@@ -673,25 +681,24 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
     }
     ptpl_list_.clear();
 
-    BuildResidualList(tmp_pv_list_, ptpl_list_);
+    BuildResidualListOMP(tmp_pv_list_, ptpl_list_, config_setting_.sigma_num_point_);
 
     for (int i = 0; i < ptpl_list_.size(); i++) {
       total_residual += fabs(ptpl_list_[i].dis_to_plane_);
     }
     effct_feat_num_ = ptpl_list_.size();
-    effect_feat_num += effct_feat_num_;
 
     //cout << "[ LIO ] Raw feature num: " << feats_undistort_->size() << ", downsampled feature num:" << feats_down_size_ 
     //     << " effective feature num: " << effct_feat_num_ << " average residual: " << total_residual / effct_feat_num_ << endl;
     
-    if (effct_feat_num_ > 0) {
+    if (effct_feat_num_ < DIM_STATE) {
       MatrixXd H(effct_feat_num_, 6);
       MatrixXd PHT(DIM_STATE, effct_feat_num_);
       MatrixXd HPHT(effct_feat_num_, effct_feat_num_);
       MatrixXd K(DIM_STATE, effct_feat_num_);
       VectorXd R(effct_feat_num_);
       VectorXd z(effct_feat_num_);
-
+  
       for (int i = 0; i < effct_feat_num_; i++) {
         auto &ptpl = ptpl_list_[i];
         V3D point_this(ptpl.point_b_);
@@ -699,25 +706,25 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
         V3D point_body(ptpl.point_b_);
         M3D point_crossmat;
         point_crossmat << SKEW_SYM_MATRX(point_this);
-
+  
         V3D point_world = state_.rot * point_this + state_.pos;
         Eigen::Matrix<double, 1, 6> J_nq;
         J_nq.block<1, 3>(0, 0) = point_world - ptpl_list_[i].center_;
         J_nq.block<1, 3>(0, 3) = -ptpl_list_[i].normal_;
-
+  
         M3D var;
         var = state_.rot * extR_ * ptpl_list_[i].body_cov_ * (state_.rot * extR_).transpose();
-
+  
         double sigma_l = J_nq * ptpl_list_[i].plane_var_ * J_nq.transpose();
-        R(i) = 0.001 + sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_;
+        R(i) = 0.001 + sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_;\
+        //R(i) = 0.01 + sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_;
+        //R(i) = 0.01;
+        //R(i) = 0.001;
         
         V3D A(point_crossmat * state_.rot.transpose() * ptpl_list_[i].normal_);
         H.row(i) << VEC_FROM_ARRAY(A), ptpl_list_[i].normal_[0], ptpl_list_[i].normal_[1], ptpl_list_[i].normal_[2];
         z(i) = -ptpl_list_[i].dis_to_plane_;
       }
-      EKF_stop_flg = false;
-      flg_EKF_converged = false;
-      
       PHT = state_.cov.block<DIM_STATE, 6>(0, 0) * H.transpose();
       HPHT = H * PHT.topRows(6);
       HPHT.diagonal() += R;
@@ -726,6 +733,101 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
       auto vec = state_propagat - state_;
       VD(DIM_STATE)
       solution = K * z + vec - K * H * vec.block<6, 1>(0, 0);
+      //cout << "PHT: " << PHT.transpose() << endl;
+      state_ += solution;
+
+      auto rot_add = solution.block<3, 1>(0, 0);
+      auto t_add = solution.block<3, 1>(3, 0);
+      if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }
+      V3D euler_cur = state_.rot.eulerAngles(2, 1, 0);
+
+      /*** Rematch Judgement ***/
+
+      if (flg_EKF_converged || ((rematch_num == 0) && (iterCount == (config_setting_.max_iterations_point_ - 2)))) { rematch_num++; }
+
+      /*** Convergence Judgements and Covariance Update ***/
+      if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_point_ - 1))) {
+        /*** Covariance Update ***/
+        // _state.cov = (I_STATE - G) * _state.cov;
+        state_.cov = state_.cov - K * H * state_.cov.block<6, DIM_STATE>(0, 0);
+        // total_distance += (_state.pos - position_last).norm();
+        position_last_ = state_.pos;
+        geoQuat_ = tf::createQuaternionMsgFromRollPitchYaw(euler_cur(0), euler_cur(1), euler_cur(2));
+
+        // VD(DIM_STATE) K_sum  = K.rowwise().sum();
+        // VD(DIM_STATE) P_diag = _state.cov.diagonal();
+        EKF_stop_flg = true;
+      }
+      if (EKF_stop_flg) break;
+    }
+    else {
+      MatrixXd Hsub(effct_feat_num_, 6);
+      MatrixXd Hsub_T_R_inv(6, effct_feat_num_);
+      VectorXd R_inv(effct_feat_num_);
+      VectorXd meas_vec(effct_feat_num_);
+      meas_vec.setZero();
+      for (int i = 0; i < effct_feat_num_; i++) {
+        auto &ptpl = ptpl_list_[i];
+        V3D point_this(ptpl.point_b_);
+        point_this = extR_ * point_this + extT_;
+        V3D point_body(ptpl.point_b_);
+        M3D point_crossmat;
+        point_crossmat << SKEW_SYM_MATRX(point_this);
+
+        /*** get the normal vector of closest surface/corner ***/
+
+        // V3D point_world = state_propagat.rot * point_this + state_propagat.pos;
+        V3D point_world = state_.rot * point_this + state_.pos;
+        Eigen::Matrix<double, 1, 6> J_nq;
+        J_nq.block<1, 3>(0, 0) = point_world - ptpl_list_[i].center_;
+        J_nq.block<1, 3>(0, 3) = -ptpl_list_[i].normal_;
+
+        M3D var;
+        // V3D normal_b = state_.rot.inverse() * ptpl_list_[i].normal_;
+        // V3D point_b = ptpl_list_[i].point_b_;
+        // double cos_theta = fabs(normal_b.dot(point_b) / point_b.norm());
+        // ptpl_list_[i].body_cov_ = ptpl_list_[i].body_cov_ * (1.0 / cos_theta) * (1.0 / cos_theta);
+
+        // point_w cov
+        // var = state_propagat.rot * extR_ * ptpl_list_[i].body_cov_ * (state_propagat.rot * extR_).transpose() +
+        //       state_propagat.cov.block<3, 3>(3, 3) + (-point_crossmat) * state_propagat.cov.block<3, 3>(0, 0) * (-point_crossmat).transpose();
+
+        // point_w cov (another_version)
+        // var = state_propagat.rot * extR_ * ptpl_list_[i].body_cov_ * (state_propagat.rot * extR_).transpose() +
+        //       state_propagat.cov.block<3, 3>(3, 3) - point_crossmat * state_propagat.cov.block<3, 3>(0, 0) * point_crossmat;
+
+        // point_body cov
+        // var = state_propagat.rot * extR_ * ptpl_list_[i].body_cov_ * (state_propagat.rot * extR_).transpose();
+        var = state_.rot * extR_ * ptpl_list_[i].body_cov_ * (state_.rot * extR_).transpose();
+
+        double sigma_l = J_nq * ptpl_list_[i].plane_var_ * J_nq.transpose();
+
+        R_inv(i) = 1.0 / (0.001 + sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_);
+        //R_inv(i) = 100;
+        //R_inv(i) = 1000;
+        // R_inv(i) = 1.0 / (sigma_l + ptpl_list_[i].normal_.transpose() * var * ptpl_list_[i].normal_);
+
+        /*** calculate the Measuremnt Jacobian matrix H ***/
+        V3D A(point_crossmat * state_.rot.transpose() * ptpl_list_[i].normal_);
+        Hsub.row(i) << VEC_FROM_ARRAY(A), ptpl_list_[i].normal_[0], ptpl_list_[i].normal_[1], ptpl_list_[i].normal_[2];
+        Hsub_T_R_inv.col(i) << A[0] * R_inv(i), A[1] * R_inv(i), A[2] * R_inv(i), ptpl_list_[i].normal_[0] * R_inv(i),
+            ptpl_list_[i].normal_[1] * R_inv(i), ptpl_list_[i].normal_[2] * R_inv(i);
+        meas_vec(i) = -ptpl_list_[i].dis_to_plane_;
+      }
+      EKF_stop_flg = false;
+      flg_EKF_converged = false;
+      /*** Iterative Kalman Filter Update ***/
+      MatrixXd K(DIM_STATE, effct_feat_num_);
+      // auto &&Hsub_T = Hsub.transpose();
+      auto &&HTz = Hsub_T_R_inv * meas_vec;
+      // fout_dbg<<"HTz: "<<HTz<<endl;
+      H_T_H.block<6, 6>(0, 0) = Hsub_T_R_inv * Hsub;
+      // EigenSolver<Matrix<double, 6, 6>> es(H_T_H.block<6,6>(0,0));
+      MD(DIM_STATE, DIM_STATE) &&K_1 = (H_T_H.block<DIM_STATE, DIM_STATE>(0, 0) + state_.cov.block<DIM_STATE, DIM_STATE>(0, 0).inverse()).inverse();
+      G.block<DIM_STATE, 6>(0, 0) = K_1.block<DIM_STATE, 6>(0, 0) * H_T_H.block<6, 6>(0, 0);
+      auto vec = state_propagat - state_;
+      VD(DIM_STATE)
+      solution = K_1.block<DIM_STATE, 6>(0, 0) * HTz + vec.block<DIM_STATE, 1>(0, 0) - G.block<DIM_STATE, 6>(0, 0) * vec.block<6, 1>(0, 0);
       int minRow, minCol;
       state_ += solution;
       auto rot_add = solution.block<3, 1>(0, 0);
@@ -733,15 +835,23 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
       if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }
       V3D euler_cur = state_.rot.eulerAngles(2, 1, 0);
 
+      /*** Rematch Judgement ***/
+
       if (flg_EKF_converged || ((rematch_num == 0) && (iterCount == (config_setting_.max_iterations_ - 2)))) { rematch_num++; }
 
       /*** Convergence Judgements and Covariance Update ***/
-      if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_ - 1))) {
+      if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_ - 1)))
+      {
         /*** Covariance Update ***/
-        state_.cov = state_.cov - K * H * state_.cov.block<6, DIM_STATE>(0, 0);
+        // _state.cov = (I_STATE - G) * _state.cov;
+        state_.cov.block<DIM_STATE, DIM_STATE>(0, 0) =
+            (I_STATE.block<DIM_STATE, DIM_STATE>(0, 0) - G.block<DIM_STATE, DIM_STATE>(0, 0)) * state_.cov.block<DIM_STATE, DIM_STATE>(0, 0);
+        // total_distance += (_state.pos - position_last).norm();
         position_last_ = state_.pos;
         geoQuat_ = tf::createQuaternionMsgFromRollPitchYaw(euler_cur(0), euler_cur(1), euler_cur(2));
 
+        // VD(DIM_STATE) K_sum  = K.rowwise().sum();
+        // VD(DIM_STATE) P_diag = _state.cov.diagonal();
         EKF_stop_flg = true;
       }
       if (EKF_stop_flg) break;
@@ -749,6 +859,7 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
   }
 
   /*** update VoxelMapManager ***/
+  
   for (size_t i = idx; i < idx + len; i++) {
     pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
     pv_list_[i] = tmp_pv_list_[i - idx];
@@ -760,6 +871,22 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
           (-point_crossmat) * state_.cov.block<3, 3>(0, 0) * (-point_crossmat).transpose() + state_.cov.block<3, 3>(3, 3);
     pv_list_[i].var = var;
   }
+  
+  /*
+  pcl::PointCloud<pcl::PointXYZI>::Ptr world_lidar(new pcl::PointCloud<pcl::PointXYZI>);
+  TransformLidar(state_.rot, state_.pos, feats_down_body_, world_lidar);
+  M3D rot_var = state_.cov.block<3, 3>(0, 0);
+  M3D t_var = state_.cov.block<3, 3>(3, 3);
+  for (size_t i = idx; i < idx + len; i++) {
+    pointWithVar &pv = pv_list_[i];
+    pv.point_w << world_lidar->points[i].x, world_lidar->points[i].y, world_lidar->points[i].z;
+
+    M3D cov = body_cov_list_[i];
+    M3D point_crossmat = cross_mat_list_[i];
+    cov = state_.rot * cov * state_.rot.transpose() + (-point_crossmat) * rot_var * (-point_crossmat.transpose()) + t_var;
+    pv.var = cov;
+  }
+  */
 }
 
 void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx, int len) {
@@ -771,7 +898,7 @@ void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx
 
   int rematch_num = 0;
   bool flg_EKF_inited, flg_EKF_converged, EKF_stop_flg = 0;
-  for (int iterCount = 0; iterCount < config_setting_.max_iterations_; iterCount++) {
+  for (int iterCount = 0; iterCount < config_setting_.max_iterations_point_; iterCount++) {
     for (size_t i = idx; i < idx + len; i++) {
       pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
       pv_list_[i].point_w << feats_down_world_->points[i].x, feats_down_world_->points[i].y, feats_down_world_->points[i].z;
@@ -820,10 +947,90 @@ void VoxelMapManager::StateEstimationCustom(StatesGroup &state_propagat, int idx
       if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }
       V3D euler_cur = state_.rot.eulerAngles(2, 1, 0);
 
-      if (flg_EKF_converged || ((rematch_num == 0) && (iterCount == (config_setting_.max_iterations_ - 2)))) { rematch_num++; }
+      if (flg_EKF_converged || ((rematch_num == 0) && (iterCount == (config_setting_.max_iterations_point_ - 2)))) { rematch_num++; }
 
       /*** Convergence Judgements and Covariance Update ***/
-      if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_ - 1))) {
+      if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_point_ - 1))) {
+        /*** Covariance Update ***/
+        state_.cov = state_.cov - K * H * state_.cov.block<6, DIM_STATE>(0, 0);
+        position_last_ = state_.pos;
+        geoQuat_ = tf::createQuaternionMsgFromRollPitchYaw(euler_cur(0), euler_cur(1), euler_cur(2));
+
+        EKF_stop_flg = true;
+      }
+      if (EKF_stop_flg) break;
+    }
+  }
+
+  /*** update VoxelMapManager ***/
+  for (size_t i = idx; i < idx + len; i++) {
+    pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
+    pv_list_[i].point_w << feats_down_world_->points[i].x, feats_down_world_->points[i].y, feats_down_world_->points[i].z;
+  }
+}
+
+void VoxelMapManager::StateEstimationCustom2(StatesGroup &state_propagat, int idx, int len) {
+  for (size_t i = idx; i < idx + len; i++) {
+    pointWithVar &pv = pv_list_[i];
+    V3D point_this(feats_down_body_->points[i].x, feats_down_body_->points[i].y, feats_down_body_->points[i].z);
+    pv.point_b = point_this;
+  }
+
+  int rematch_num = 0;
+  bool flg_EKF_inited, flg_EKF_converged, EKF_stop_flg = 0;
+  for (int iterCount = 0; iterCount < config_setting_.max_iterations_point_; iterCount++) {
+    for (size_t i = idx; i < idx + len; i++) {
+      pointBodyToWorld(state_, feats_down_body_->points[i], feats_down_world_->points[i]);
+      pv_list_[i].point_w << feats_down_world_->points[i].x, feats_down_world_->points[i].y, feats_down_world_->points[i].z;
+    }
+    //ptpl_list_.clear();
+
+    BuildResidual2(pv_list_, ptpl_list_, idx, len);
+
+    effct_feat_num_ = ptpl_list_.size();
+    if (effct_feat_num_ > 0) {
+      MatrixXd H(effct_feat_num_, 6);
+      MatrixXd PHT(DIM_STATE, effct_feat_num_);
+      MatrixXd HPHT(effct_feat_num_, effct_feat_num_);
+      MatrixXd K(DIM_STATE, effct_feat_num_);
+      VectorXd R(effct_feat_num_);
+      VectorXd z(effct_feat_num_);
+
+      for (int i = 0; i < effct_feat_num_; i++) {
+        auto &ptpl = ptpl_list_[i];
+        V3D point_this(ptpl.point_b_);
+        point_this = extR_ * point_this + extT_;
+        V3D point_body(ptpl.point_b_);
+        M3D point_crossmat;
+        point_crossmat << SKEW_SYM_MATRX(point_this);
+        
+        V3D A(point_crossmat * state_.rot.transpose() * ptpl_list_[i].normal_);
+        H.row(i) << VEC_FROM_ARRAY(A), ptpl_list_[i].normal_[0], ptpl_list_[i].normal_[1], ptpl_list_[i].normal_[2];
+        z(i) = -ptpl_list_[i].dis_to_plane_;
+        R(i) = noise_cov;
+      }
+      EKF_stop_flg = false;
+      flg_EKF_converged = false;
+      
+      PHT = state_.cov.block<DIM_STATE, 6>(0, 0) * H.transpose();
+      HPHT = H * PHT.topRows(6);
+      HPHT.diagonal() += R;
+      K = PHT * HPHT.inverse();
+
+      auto vec = state_propagat - state_;
+      VD(DIM_STATE)
+      solution = K * z + vec - K * H * vec.block<6, 1>(0, 0);
+      int minRow, minCol;
+      state_ += solution;
+      auto rot_add = solution.block<3, 1>(0, 0);
+      auto t_add = solution.block<3, 1>(3, 0);
+      if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }
+      V3D euler_cur = state_.rot.eulerAngles(2, 1, 0);
+
+      if (flg_EKF_converged || ((rematch_num == 0) && (iterCount == (config_setting_.max_iterations_point_ - 2)))) { rematch_num++; }
+
+      /*** Convergence Judgements and Covariance Update ***/
+      if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_point_ - 1))) {
         /*** Covariance Update ***/
         state_.cov = state_.cov - K * H * state_.cov.block<6, DIM_STATE>(0, 0);
         position_last_ = state_.pos;
@@ -981,11 +1188,11 @@ void VoxelMapManager::UpdateVoxelMap(const std::vector<pointWithVar> &input_poin
   }
 }
 
-void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list)
+void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, double sigma_num)
 {
   int max_layer = config_setting_.max_layer_;
   double voxel_size = config_setting_.max_voxel_size_;
-  double sigma_num = config_setting_.sigma_num_;
+  //double sigma_num = config_setting_.sigma_num_;
   std::mutex mylock;
   ptpl_list.clear();
   std::vector<PointToPlane> all_ptpl_list(pv_list.size());
@@ -1017,7 +1224,7 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
       PointToPlane single_ptpl;
       bool is_sucess = false;
       double prob = 0;
-      build_single_residual(pv, current_octo, 0, is_sucess, prob, single_ptpl);
+      build_single_residual(pv, current_octo, 0, is_sucess, prob, single_ptpl, sigma_num);
       if (!is_sucess)
       {
         VOXEL_LOCATION near_position = position;
@@ -1028,7 +1235,7 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
         if (loc_xyz[2] > (current_octo->voxel_center_[2] + current_octo->quater_length_)) { near_position.z = near_position.z + 1; }
         else if (loc_xyz[2] < (current_octo->voxel_center_[2] - current_octo->quater_length_)) { near_position.z = near_position.z - 1; }
         auto iter_near = voxel_map_.find(near_position);
-        if (iter_near != voxel_map_.end()) { build_single_residual(pv, iter_near->second, 0, is_sucess, prob, single_ptpl); }
+        if (iter_near != voxel_map_.end()) { build_single_residual(pv, iter_near->second, 0, is_sucess, prob, single_ptpl, sigma_num); }
       }
       if (is_sucess)
       {
@@ -1118,10 +1325,10 @@ void VoxelMapManager::BuildResidualList(std::vector<pointWithVar> &pv_list, std:
 }
 
 void VoxelMapManager::build_single_residual(pointWithVar &pv, const VoxelOctoTree *current_octo, const int current_layer, bool &is_sucess,
-                                            double &prob, PointToPlane &single_ptpl)
+                                            double &prob, PointToPlane &single_ptpl, double sigma_num)
 {
   int max_layer = config_setting_.max_layer_;
-  double sigma_num = config_setting_.sigma_num_;
+  //double sigma_num = config_setting_.sigma_num_;
 
   double radius_k = 3;
   Eigen::Vector3d p_w = pv.point_w;
@@ -1184,7 +1391,7 @@ void VoxelMapManager::build_single_residual(pointWithVar &pv, const VoxelOctoTre
         {
 
           VoxelOctoTree *leaf_octo = current_octo->leaves_[leafnum];
-          build_single_residual(pv, leaf_octo, current_layer + 1, is_sucess, prob, single_ptpl);
+          build_single_residual(pv, leaf_octo, current_layer + 1, is_sucess, prob, single_ptpl, sigma_num);
         }
       }
       return;
@@ -1497,6 +1704,7 @@ void VoxelMapManager::BuildResidual(std::vector<pointWithVar> &pv_list, std::vec
     else {
       if (esti_plane(pabcd, center, points_near, plane_thr)) {
         PointToPlane ptpl;
+        pv.normal = ptpl.normal_;
         ptpl.point_b_ = pv.point_b;
         ptpl.point_w_ = pv.point_w;
         ptpl.normal_ << pabcd(0), pabcd(1), pabcd(2);
@@ -1508,6 +1716,39 @@ void VoxelMapManager::BuildResidual(std::vector<pointWithVar> &pv_list, std::vec
         if (pv.point_b.norm() > match_s * pd2 * pd2) {
           ptpl.is_valid_ = true;
           ptpl_list_.emplace_back(ptpl);
+        }
+      }
+    }
+
+  }
+}
+
+void VoxelMapManager::BuildResidual2(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len) {
+	Vector4f pabcd;
+  Vector3d center;
+  for (int i = idx; i < idx + len; i++) {
+    auto &pv = pv_list[i];
+    PointType &point_world = feats_down_world_->points[i];
+    PointVector &points_near = Nearest_Points[i];
+
+    if (points_near.size() < num_match_points) {
+      continue;
+    }
+    else {
+      if (esti_plane(pabcd, center, points_near, plane_thr)) {
+        PointToPlane ptpl;
+        pv.normal = ptpl.normal_;
+        ptpl.point_b_ = pv.point_b;
+        ptpl.point_w_ = pv.point_w;
+        ptpl.normal_ << pabcd(0), pabcd(1), pabcd(2);
+        ptpl.center_ = center;
+        ptpl.d_ = pabcd(3);
+        ptpl.dis_to_plane_ = (float) (ptpl.normal_.dot(pv.point_w) + ptpl.d_);
+
+        float pd2 = ptpl.dis_to_plane_;
+        if (pv.point_b.norm() > match_s * pd2 * pd2) {
+          ptpl.is_valid_ = true;
+          //ptpl_list_.emplace_back(ptpl);
         }
       }
     }
@@ -1540,6 +1781,33 @@ bool esti_plane(Vector4f &pca_result, Vector3d &center, const PointVector &point
   center(0) = -r(0) / point.size();
   center(1) = -r(1) / point.size();
   center(2) = -r(2) / point.size();
+
+  /*
+  Matrix3d H;
+  Vector3d r;
+  H.setZero();
+  r.setZero();
+
+  for (auto &pnt : point) {
+    Vector3d p(pnt.x, pnt.y, pnt.z);
+    H += p * p.transpose();
+    r -= p;
+  }
+  
+  Vector3d normvec = H.colPivHouseholderQr().solve(r);
+  double n = normvec.norm();
+  double lambda = (normvec.dot((H - r * r.transpose() / point.size()) * normvec)) / (n * n * point.size());
+  if (lambda > threshold) return false;
+
+  pca_result(0) = normvec(0) / n;
+  pca_result(1) = normvec(1) / n;
+  pca_result(2) = normvec(2) / n;
+  pca_result(3) = 1.0 / n;
+
+  center(0) = -r(0) / point.size();
+  center(1) = -r(1) / point.size();
+  center(2) = -r(2) / point.size();
+  */
 
   return true;
 }

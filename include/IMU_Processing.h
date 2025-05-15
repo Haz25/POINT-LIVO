@@ -29,7 +29,7 @@ typedef std::shared_ptr<VoxelMapManager> VoxelMapManagerPtr;
 const bool time_list(PointType &x, PointType &y); //{return (x.curvature < y.curvature);};
 std::vector<int> time_compressing(const PointCloudXYZI::Ptr &point_cloud);                     
 
-enum Type {IMU, LIDAR, DEFAULT};
+enum Type {IMU, LIDAR, LIDAR_RAW, DEFAULT};
 
 struct measure {
   int idx;
@@ -76,7 +76,9 @@ public:
                 vector<pointWithVar> &_pv_list, VoxelMapManagerPtr &voxelmap_manager);
   void UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);
   void UndistortPclPointLIO(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);  
-  void UndistortPclCustom(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);               
+  void UndistortPclCustom(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);
+  void UndistortPclCustom2(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);
+  void UndistortPclCustom3(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);               
   //void processImu(StatesGroup &stat);
   void Predict(StatesGroup &stat, double dt, bool predict_state, bool prop_cov);
   void StateEstimationIMU(StatesGroup &stat);
@@ -115,6 +117,7 @@ private:
   void IMU_init(const MeasureGroup &meas, StatesGroup &state, int &N);
   void Forward_without_imu(LidarMeasureGroup &meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);
   PointCloudXYZI pcl_wait_proc;
+  PointCloudXYZI pcl_wait_proc_filtered;
   sensor_msgs::ImuConstPtr last_imu;
   PointCloudXYZI::Ptr cur_pcl_un_;
   PointCloudXYZI::Ptr pcl_filtered;

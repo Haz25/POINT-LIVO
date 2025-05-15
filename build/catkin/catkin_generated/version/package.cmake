@@ -1,6 +1,6 @@
 set(_CATKIN_CURRENT_PACKAGE "catkin")
-set(catkin_VERSION "0.8.10")
-set(catkin_MAINTAINER "Michael Carroll <michael@openrobotics.org>, Tully Foote <tfoote@openrobotics.org>")
+set(catkin_VERSION "0.8.11")
+set(catkin_MAINTAINER "Geoffrey Biggs <geoff@openrobotics.org>, Ivan Santiago Paunovic <ivanpauno@ekumenlabs.com>")
 set(catkin_PACKAGE_FORMAT "3")
 set(catkin_BUILD_DEPENDS "python-argparse" "python-catkin-pkg" "python3-catkin-pkg" "python-empy" "python3-empy")
 set(catkin_BUILD_DEPENDS_python-catkin-pkg_VERSION_GT "0.4.3")

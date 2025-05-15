@@ -56,3 +56,186 @@ make: *** [Makefile:121: cmTC_10ed4/fast] Error 2
 
 
 
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-1ggVl3
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_932a1/fast && /usr/bin/make  -f CMakeFiles/cmTC_932a1.dir/build.make CMakeFiles/cmTC_932a1.dir/build
+make[1]: Entering directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-1ggVl3'
+Building C object CMakeFiles/cmTC_932a1.dir/src.c.o
+/usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_932a1.dir/src.c.o -c /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-1ggVl3/src.c
+Linking C executable cmTC_932a1
+/opt/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_932a1.dir/link.txt --verbose=1
+/usr/bin/cc -rdynamic CMakeFiles/cmTC_932a1.dir/src.c.o -o cmTC_932a1 
+/usr/bin/ld: CMakeFiles/cmTC_932a1.dir/src.c.o: in function `main':
+src.c:(.text+0x46): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x5e): undefined reference to `pthread_cancel'
+/usr/bin/ld: src.c:(.text+0x6f): undefined reference to `pthread_join'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_932a1.dir/build.make:99: cmTC_932a1] Error 1
+make[1]: Leaving directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-1ggVl3'
+make: *** [Makefile:127: cmTC_932a1/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-Qv4dR2
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_3b752/fast && /usr/bin/make  -f CMakeFiles/cmTC_3b752.dir/build.make CMakeFiles/cmTC_3b752.dir/build
+make[1]: Entering directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-Qv4dR2'
+Building C object CMakeFiles/cmTC_3b752.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create -o CMakeFiles/cmTC_3b752.dir/CheckFunctionExists.c.o -c /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-Qv4dR2/CheckFunctionExists.c
+Linking C executable cmTC_3b752
+/opt/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3b752.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create -rdynamic CMakeFiles/cmTC_3b752.dir/CheckFunctionExists.c.o -o cmTC_3b752  -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_3b752.dir/build.make:99: cmTC_3b752] Error 1
+make[1]: Leaving directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-Qv4dR2'
+make: *** [Makefile:127: cmTC_3b752/fast] Error 2
+
+
+
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-yCLLbD
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_49369/fast && /usr/bin/make  -f CMakeFiles/cmTC_49369.dir/build.make CMakeFiles/cmTC_49369.dir/build
+make[1]: Entering directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-yCLLbD'
+Building C object CMakeFiles/cmTC_49369.dir/src.c.o
+/usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_49369.dir/src.c.o -c /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-yCLLbD/src.c
+Linking C executable cmTC_49369
+/opt/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_49369.dir/link.txt --verbose=1
+/usr/bin/cc -rdynamic CMakeFiles/cmTC_49369.dir/src.c.o -o cmTC_49369 
+/usr/bin/ld: CMakeFiles/cmTC_49369.dir/src.c.o: in function `main':
+src.c:(.text+0x46): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x5e): undefined reference to `pthread_cancel'
+/usr/bin/ld: src.c:(.text+0x6f): undefined reference to `pthread_join'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_49369.dir/build.make:99: cmTC_49369] Error 1
+make[1]: Leaving directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-yCLLbD'
+make: *** [Makefile:127: cmTC_49369/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-AdBBpA
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_21b2e/fast && /usr/bin/make  -f CMakeFiles/cmTC_21b2e.dir/build.make CMakeFiles/cmTC_21b2e.dir/build
+make[1]: Entering directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-AdBBpA'
+Building C object CMakeFiles/cmTC_21b2e.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create -o CMakeFiles/cmTC_21b2e.dir/CheckFunctionExists.c.o -c /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-AdBBpA/CheckFunctionExists.c
+Linking C executable cmTC_21b2e
+/opt/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_21b2e.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create -rdynamic CMakeFiles/cmTC_21b2e.dir/CheckFunctionExists.c.o -o cmTC_21b2e  -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_21b2e.dir/build.make:99: cmTC_21b2e] Error 1
+make[1]: Leaving directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-AdBBpA'
+make: *** [Makefile:127: cmTC_21b2e/fast] Error 2
+
+
+
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-2P8NiP
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_20927/fast && /usr/bin/make  -f CMakeFiles/cmTC_20927.dir/build.make CMakeFiles/cmTC_20927.dir/build
+make[1]: Entering directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-2P8NiP'
+Building C object CMakeFiles/cmTC_20927.dir/src.c.o
+/usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -o CMakeFiles/cmTC_20927.dir/src.c.o -c /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-2P8NiP/src.c
+Linking C executable cmTC_20927
+/opt/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_20927.dir/link.txt --verbose=1
+/usr/bin/cc -rdynamic CMakeFiles/cmTC_20927.dir/src.c.o -o cmTC_20927 
+/usr/bin/ld: CMakeFiles/cmTC_20927.dir/src.c.o: in function `main':
+src.c:(.text+0x46): undefined reference to `pthread_create'
+/usr/bin/ld: src.c:(.text+0x52): undefined reference to `pthread_detach'
+/usr/bin/ld: src.c:(.text+0x5e): undefined reference to `pthread_cancel'
+/usr/bin/ld: src.c:(.text+0x6f): undefined reference to `pthread_join'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_20927.dir/build.make:99: cmTC_20927] Error 1
+make[1]: Leaving directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-2P8NiP'
+make: *** [Makefile:127: cmTC_20927/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-LIs3LL
+
+Run Build Command(s):/usr/bin/make -f Makefile cmTC_9cc6e/fast && /usr/bin/make  -f CMakeFiles/cmTC_9cc6e.dir/build.make CMakeFiles/cmTC_9cc6e.dir/build
+make[1]: Entering directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-LIs3LL'
+Building C object CMakeFiles/cmTC_9cc6e.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create -o CMakeFiles/cmTC_9cc6e.dir/CheckFunctionExists.c.o -c /home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-LIs3LL/CheckFunctionExists.c
+Linking C executable cmTC_9cc6e
+/opt/cmake/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9cc6e.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create -rdynamic CMakeFiles/cmTC_9cc6e.dir/CheckFunctionExists.c.o -o cmTC_9cc6e  -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_9cc6e.dir/build.make:99: cmTC_9cc6e] Error 1
+make[1]: Leaving directory '/home/mars_ugv/point-livo_ws/src/POINT-LIVO/build/CMakeFiles/CMakeScratch/TryCompile-LIs3LL'
+make: *** [Makefile:127: cmTC_9cc6e/fast] Error 2
+
+
+
