@@ -1217,13 +1217,22 @@ void ImuProcess::UndistortPclCustom2(LidarMeasureGroup &lidar_meas, StatesGroup 
   }
 
   auto state_cp = state_inout;
+  int cnt = 0;
+  int cnt_down = 0;
 
   if (lidar_meas.lio_vio_flg == LIO) {
     pcl_wait_proc.resize(lidar_meas.pcl_proc_cur->points.size());
     pcl_wait_proc = *(lidar_meas.pcl_proc_cur);
     downSizeFilterSurf.setInputCloud(lidar_meas.pcl_proc_cur);
     downSizeFilterSurf.filter(pcl_wait_proc_filtered);
-    feats_size = lidar_meas.pcl_proc_cur->size(); 
+    feats_size = lidar_meas.pcl_proc_cur->size();
+    /*
+    pcl_wait_proc_filtered.clear();
+    for (int i = 0; i < feats_size; i++) {
+      auto &pt = lidar_meas.pcl_proc_cur->points[i];
+      if (i % 10 == 0) pcl_wait_proc_filtered.points.emplace_back(pt);
+    }
+    */ 
 
     T_down = omp_get_wtime();
 
@@ -1267,7 +1276,9 @@ void ImuProcess::UndistortPclCustom2(LidarMeasureGroup &lidar_meas, StatesGroup 
         cout << "ivox size: " << ivox->NumValidGrids() << endl;
       }
     }
-
+    
+    //sort(pcl_wait_proc.points.begin(), pcl_wait_proc.points.end(),[](PointType &p1, PointType &p2){return p1.curvature < p2.curvature;});
+    
     for (int i = 0; i < feats_size; i++) {
       measure m;
       m.idx = i;
@@ -1341,10 +1352,6 @@ void ImuProcess::UndistortPclCustom2(LidarMeasureGroup &lidar_meas, StatesGroup 
         Predict(state_inout, dt_cov, false, true);
         StateEstimationIMU(state_inout);
 
-        Predict(state_cp, dt, true, false);
-        Predict(state_cp, dt_cov, false, true);
-        StateEstimationIMU(state_cp);
-
         last_prop_time = cur_meas.time;
         last_update_time = cur_meas.time;
 
@@ -1354,17 +1361,17 @@ void ImuProcess::UndistortPclCustom2(LidarMeasureGroup &lidar_meas, StatesGroup 
         //auto &pt = pcl_wait_proc.points[cur_meas.idx];
 
         if (lid_cnt == 0) cout << "first lidar time: " << cur_meas.time << endl;
-        if (lid_cnt == pcl_wait_proc_filtered.size() - 1) cout << "last lidar time: " << cur_meas.time << endl;
+        //if (lid_cnt == pcl_wait_proc_filtered.size() - 1) cout << "last lidar time: " << cur_meas.time << endl;
+        if (lid_cnt == cnt_down - 1) cout << "last lidar time: " << cur_meas.time << endl;
         lid_cnt ++;
 
         double dt = cur_meas.time - last_prop_time;
         double dt_cov = cur_meas.time - last_update_time;
 
         Predict(state_inout, dt, true, false);
-        Predict(state_cp, dt, true, false);
         voxelmap_manager->state_ = state_inout;
-        voxelmap_manager->StateEstimationPointLIO(state_inout, cur_meas.idx, 1);
-        //voxelmap_manager->StateEstimationCustom(state_inout, cur_meas.idx, 1);
+        //voxelmap_manager->StateEstimationPointLIO(state_inout, cur_meas.idx, 1);
+        voxelmap_manager->StateEstimationCustom(state_inout, cur_meas.idx, 1);
         state_inout = voxelmap_manager->state_;
 
         last_prop_time = cur_meas.time;
@@ -1405,7 +1412,6 @@ void ImuProcess::UndistortPclCustom2(LidarMeasureGroup &lidar_meas, StatesGroup 
         double dt_cov = cur_meas.time - last_update_time;
 
         Predict(state_inout, dt, true, false);
-        Predict(state_cp, dt, true, false);
 
         last_prop_time = cur_meas.time;
         last_update_time = cur_meas.time;
@@ -1443,8 +1449,6 @@ void ImuProcess::UndistortPclCustom2(LidarMeasureGroup &lidar_meas, StatesGroup 
 
   cout << "[ LIO ] Raw feature num: " << feats_size << ", downsampled feature num:" << feats_down_size 
        << " effective feature num: " << effect_feat_num << " average residual: " << total_residual / effect_feat_num << endl;
-
-  //state_inout.cov = state_cp.cov;
 }
 
 void ImuProcess::UndistortPclCustom3(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr &voxelmap_manager) {

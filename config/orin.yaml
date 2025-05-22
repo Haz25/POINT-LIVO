@@ -65,19 +65,19 @@ lio:
   beam_err: 0.05  # 0.05
   min_eigen_value: 0.0025 # 0.0025
   sigma_num: 3    # fast-livo
-  sigma_num_point: 1   # point-lio
+  sigma_num_point: 3   
   voxel_size: 0.5
   max_layer: 3
-  max_points_num: 10
+  max_points_num: 50
   layer_init_num: [5, 5, 5, 5, 5]
 
 ivox:
-  grid_resolution: 0.4
+  grid_resolution: 0.5
   nearby_type: 0
   match_s: 300
   num_match_points: 5
-  filter_size_map: 0.2
-  noise_cov: 0.01
+  filter_size_map: 0.125
+  noise_cov: 0.005
   map_init_size: 10000
 
 local_map:  

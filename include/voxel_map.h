@@ -257,7 +257,7 @@ public:
   void UpdateVoxelMap(const std::vector<pointWithVar> &input_points);
 
   void BuildResidualListOMP(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, double sigma_num);
-  void BuildResidualList(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list);
+  void BuildResidualList(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, double sigma_num);
   void BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len);
   void BuildResidual2(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len);
 
@@ -285,7 +285,7 @@ typedef std::shared_ptr<VoxelMapManager> VoxelMapManagerPtr;
 
 void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config);
 
-bool esti_plane(Vector4f &pca_result, Vector3d &center, const PointVector &point, const double threshold);
+bool esti_plane(Vector4d &pca_result, Vector3d &center, const PointVector &point, const double threshold);
 void MapIncremental(PointCloudXYZI::Ptr feats_down_world);
 
 #endif // VOXEL_MAP_H_

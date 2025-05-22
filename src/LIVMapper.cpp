@@ -304,14 +304,14 @@ void LIVMapper::stateEstimationAndMapping()
   {
     case VIO:
       handleVIO();
-      //handleLIO();
+      handleLIOwoUpdate();
       break;
     case LIO:
     case LO:
-      handleLIO();
+      //handleLIO();
       //handlePointLIO();
       //handleLIOCustom();
-      //handleLIOCustom2();
+      handleLIOCustom2();
       break;
   }
 }
@@ -390,7 +390,7 @@ void LIVMapper::handleLIO() {
 
   double t_down = omp_get_wtime();
 
-  //MapIncremental(voxelmap_manager->feats_down_world_);
+  MapIncremental(voxelmap_manager->feats_down_world_);
   feats_down_size = feats_down_body->points.size();
   voxelmap_manager->feats_down_body_ = feats_down_body;
   transformLidar(_state.rot, _state.pos, feats_down_body, feats_down_world);
@@ -409,7 +409,7 @@ void LIVMapper::handleLIO() {
 
   voxelmap_manager->StateEstimation(state_propagat);
   _state = voxelmap_manager->state_;
-  //_pv_list = voxelmap_manager->pv_list_;
+  _pv_list = voxelmap_manager->pv_list_;
 
   double t2 = omp_get_wtime();
 
@@ -511,7 +511,143 @@ void LIVMapper::handleLIO() {
   printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
   printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Current Total Time", t4 - t0);
   printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Average Total Time", aver_time_consu);
+  printf("\033[1;34m+-------------------------------------------------------z------+\033[0m\n");
+
+  euler_cur = RotMtoEuler(_state.rot);
+  fout_out << std::setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
+            << _state.pos.transpose() << " " << _state.vel.transpose() << " " << _state.bias_g.transpose() << " "
+            << _state.bias_a.transpose() << " " << V3D(_state.inv_expo_time, 0, 0).transpose() << " " << feats_undistort->points.size() << std::endl;
+}
+
+void LIVMapper::handleLIOwoUpdate() {    
+  euler_cur = RotMtoEuler(_state.rot);
+  fout_pre << setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
+           << _state.pos.transpose() << " " << _state.vel.transpose() << " " << _state.bias_g.transpose() << " "
+           << _state.bias_a.transpose() << " " << V3D(_state.inv_expo_time, 0, 0).transpose() << endl;
+
+  double t0 = omp_get_wtime();
+
+  cout << "handleLIOwoUpdate" << endl;
+
+  double t_down = omp_get_wtime();
+
+  feats_down_size = feats_down_body->points.size();
+  voxelmap_manager->feats_down_body_ = feats_down_body;
+  transformLidar(_state.rot, _state.pos, feats_down_body, feats_down_world);
+  voxelmap_manager->feats_down_world_ = feats_down_world;
+  voxelmap_manager->feats_down_size_ = feats_down_size;
+
+  cout << "feats_down_size: " << feats_down_size << endl;
+
+  double t1 = omp_get_wtime();
+
+  voxelmap_manager->StateEstimation(state_propagat);
+  _state = voxelmap_manager->state_;
+  _pv_list = voxelmap_manager->pv_list_;
+
+  double t2 = omp_get_wtime();
+
+  if (imu_prop_enable) 
+  {
+    ekf_finish_once = true;
+    latest_ekf_state = _state;
+    latest_ekf_time = LidarMeasures.last_lio_update_time;
+    state_update_flg = true;
+  }
+
+  if (pose_output_en) 
+  {
+    static bool pos_opend = false;
+    static int ocount = 0;
+    std::ofstream outFile, evoFile;
+    if (!pos_opend) 
+    {
+      evoFile.open(std::string(ROOT_DIR) + "Log/result/" + seq_name + ".txt", std::ios::out);
+      pos_opend = true;
+      if (!evoFile.is_open()) ROS_ERROR("open fail\n");
+    } 
+    else 
+    {
+      evoFile.open(std::string(ROOT_DIR) + "Log/result/" + seq_name + ".txt", std::ios::app);
+      if (!evoFile.is_open()) ROS_ERROR("open fail\n");
+    }
+    Eigen::Matrix4d outT;
+    Eigen::Quaterniond q(_state.rot);
+    evoFile << std::fixed;
+    evoFile << LidarMeasures.last_lio_update_time << " " << _state.pos[0] << " " << _state.pos[1] << " " << _state.pos[2] << " "
+            << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << std::endl;
+  }
+  
+  euler_cur = RotMtoEuler(_state.rot);
+  geoQuat = tf::createQuaternionMsgFromRollPitchYaw(euler_cur(0), euler_cur(1), euler_cur(2));
+  publish_odometry(pubOdomAftMapped);
+
+  double t3 = omp_get_wtime();
+
+  /*
+  PointCloudXYZI::Ptr world_lidar(new PointCloudXYZI());
+  transformLidar(_state.rot, _state.pos, feats_down_body, world_lidar);
+  for (size_t i = 0; i < world_lidar->points.size(); i++) 
+  {
+    voxelmap_manager->pv_list_[i].point_w << world_lidar->points[i].x, world_lidar->points[i].y, world_lidar->points[i].z;
+    M3D point_crossmat = voxelmap_manager->cross_mat_list_[i];
+    M3D var = voxelmap_manager->body_cov_list_[i];
+    var = (_state.rot * extR) * var * (_state.rot * extR).transpose() +
+          (-point_crossmat) * _state.cov.block<3, 3>(0, 0) * (-point_crossmat).transpose() + _state.cov.block<3, 3>(3, 3);
+    voxelmap_manager->pv_list_[i].var = var;
+  }
+  */
+  //voxelmap_manager->UpdateVoxelMap(voxelmap_manager->pv_list_);
+  //std::cout << "[ LIO ] Update Voxel Map" << std::endl;
+  //_pv_list = voxelmap_manager->pv_list_;
+  
+  double t4 = omp_get_wtime();
+
+  if(voxelmap_manager->config_setting_.map_sliding_en) {
+    voxelmap_manager->mapSliding();
+  }
+  
+  PointCloudXYZI::Ptr laserCloudFullRes(dense_map_en ? feats_undistort : feats_down_body);
+  int size = laserCloudFullRes->points.size();
+  PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(size, 1));
+
+  for (int i = 0; i < size; i++) {
+    RGBpointBodyToWorld(&laserCloudFullRes->points[i], &laserCloudWorld->points[i]);
+  }
+  *pcl_w_wait_pub = *laserCloudWorld;
+
+  if (!img_en) publish_frame_world(pubLaserCloudFullRes, pubLaserCloudFullRes2, vio_manager);
+  if (pub_effect_point_en) publish_effect_world(pubLaserCloudEffect, voxelmap_manager->ptpl_list_);
+  if (voxelmap_manager->config_setting_.is_pub_plane_map_) voxelmap_manager->pubVoxelMap();
+  publish_path(pubPath);
+  publish_mavros(mavros_pose_publisher);
+
+  frame_num ++;
+  aver_time_consu = aver_time_consu * (frame_num - 1) / frame_num + (t4 - t0) / frame_num;
+
+  // aver_time_icp = aver_time_icp * (frame_num - 1) / frame_num + (t2 - t1) / frame_num;
+  // aver_time_map_inre = aver_time_map_inre * (frame_num - 1) / frame_num + (t4 - t3) / frame_num;
+  // aver_time_solve = aver_time_solve * (frame_num - 1) / frame_num + (solve_time) / frame_num;
+  // aver_time_const_H_time = aver_time_const_H_time * (frame_num - 1) / frame_num + solve_const_H_time / frame_num;
+  // printf("[ mapping time ]: per scan: propagation %0.6f downsample: %0.6f match: %0.6f solve: %0.6f  ICP: %0.6f  map incre: %0.6f total: %0.6f \n"
+  //         "[ mapping time ]: average: icp: %0.6f construct H: %0.6f, total: %0.6f \n",
+  //         t_prop - t0, t1 - t_prop, match_time, solve_time, t3 - t1, t5 - t3, t5 - t0, aver_time_icp, aver_time_const_H_time, aver_time_consu);
+
+  // printf("\033[1;36m[ LIO mapping time ]: current scan: icp: %0.6f secs, map incre: %0.6f secs, total: %0.6f secs.\033[0m\n"
+  //         "\033[1;36m[ LIO mapping time ]: average: icp: %0.6f secs, map incre: %0.6f secs, total: %0.6f secs.\033[0m\n",
+  //         t2 - t1, t4 - t3, t4 - t0, aver_time_icp, aver_time_map_inre, aver_time_consu);
   printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;34m|                         LIO Mapping Time                    |\033[0m\n");
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;34m| %-29s | %-27s |\033[0m\n", "Algorithm Stage", "Time (secs)");
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "DownSample", t_down - t0);
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "ICP", t2 - t1);
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "updateVoxelMap", t4 - t3);
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Current Total Time", t4 - t0);
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Average Total Time", aver_time_consu);
+  printf("\033[1;34m+-------------------------------------------------------z------+\033[0m\n");
 
   euler_cur = RotMtoEuler(_state.rot);
   fout_out << std::setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
@@ -532,15 +668,6 @@ void LIVMapper::handleLIOCustom() {
 
   feats_down_body = feats_undistort;
   feats_down_size = feats_down_body->size();
-  voxelmap_manager->feats_down_world_->resize(feats_down_size);
-  voxelmap_manager->pv_list_.resize(feats_down_size);
-  voxelmap_manager->cross_mat_list_.resize(feats_down_size);
-  voxelmap_manager->body_cov_list_.resize(feats_down_size);
-  
-  //feats_down_world = voxelmap_manager->feats_down_world_;
-  
-  voxelmap_manager->StateEstimationCustom2(state_propagat, 0, feats_down_size);
-  _state = voxelmap_manager->state_;
   feats_down_world = voxelmap_manager->feats_down_world_;
 
   if (!lidar_map_inited) {

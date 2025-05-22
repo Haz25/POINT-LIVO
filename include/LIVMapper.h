@@ -35,6 +35,7 @@ public:
   void stateEstimationAndMapping();
   void handleVIO();
   void handleLIO();
+  void handleLIOwoUpdate();
   void handlePointLIO();
   void handleLIOCustom();
   void handleLIOCustom2();

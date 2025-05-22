@@ -56,7 +56,7 @@ void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config)
   nh.param<vector<int>>("lio/layer_init_num", voxel_config.layer_init_num_, vector<int>{5,5,5,5,5});
   nh.param<int>("lio/max_points_num", voxel_config.max_points_num_, 50);
   nh.param<int>("lio/max_iterations", voxel_config.max_iterations_, 5);
-  nh.param<int>("lio/max_iterations_point", voxel_config.max_iterations_point_, 5);
+  nh.param<int>("lio/max_iterations_point", voxel_config.max_iterations_point_, 1);
 
   nh.param<bool>("local_map/map_sliding_en", voxel_config.map_sliding_en, false);
   nh.param<int>("local_map/half_map_size", voxel_config.half_map_size, 100);
@@ -681,7 +681,7 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
     }
     ptpl_list_.clear();
 
-    BuildResidualListOMP(tmp_pv_list_, ptpl_list_, config_setting_.sigma_num_point_);
+    BuildResidualList(tmp_pv_list_, ptpl_list_, config_setting_.sigma_num_point_);
 
     for (int i = 0; i < ptpl_list_.size(); i++) {
       total_residual += fabs(ptpl_list_[i].dis_to_plane_);
@@ -725,6 +725,9 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
         H.row(i) << VEC_FROM_ARRAY(A), ptpl_list_[i].normal_[0], ptpl_list_[i].normal_[1], ptpl_list_[i].normal_[2];
         z(i) = -ptpl_list_[i].dis_to_plane_;
       }
+      EKF_stop_flg = false;
+      flg_EKF_converged = false;
+
       PHT = state_.cov.block<DIM_STATE, 6>(0, 0) * H.transpose();
       HPHT = H * PHT.topRows(6);
       HPHT.diagonal() += R;
@@ -738,7 +741,7 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
 
       auto rot_add = solution.block<3, 1>(0, 0);
       auto t_add = solution.block<3, 1>(3, 0);
-      if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.015)) { flg_EKF_converged = true; }
+      if ((rot_add.norm() * 57.3 < 0.01) && (t_add.norm() * 100 < 0.0015)) { flg_EKF_converged = true; }
       V3D euler_cur = state_.rot.eulerAngles(2, 1, 0);
 
       /*** Rematch Judgement ***/
@@ -747,6 +750,7 @@ void VoxelMapManager::StateEstimationPointLIO(StatesGroup &state_propagat, int i
 
       /*** Convergence Judgements and Covariance Update ***/
       if (!EKF_stop_flg && (rematch_num >= 2 || (iterCount == config_setting_.max_iterations_point_ - 1))) {
+      //if (flg_EKF_converged || iterCount == config_setting_.max_iterations_point_ - 1) {
         /*** Covariance Update ***/
         // _state.cov = (I_STATE - G) * _state.cov;
         state_.cov = state_.cov - K * H * state_.cov.block<6, DIM_STATE>(0, 0);
@@ -1258,11 +1262,11 @@ void VoxelMapManager::BuildResidualListOMP(std::vector<pointWithVar> &pv_list, s
   }
 }
 
-void VoxelMapManager::BuildResidualList(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list)
+void VoxelMapManager::BuildResidualList(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, double sigma_num)
 {
   int max_layer = config_setting_.max_layer_;
   double voxel_size = config_setting_.max_voxel_size_;
-  double sigma_num = config_setting_.sigma_num_;
+  //double sigma_num = config_setting_.sigma_num_;
   std::mutex mylock;
   ptpl_list.clear();
   std::vector<PointToPlane> all_ptpl_list(pv_list.size());
@@ -1290,7 +1294,7 @@ void VoxelMapManager::BuildResidualList(std::vector<pointWithVar> &pv_list, std:
       PointToPlane single_ptpl;
       bool is_sucess = false;
       double prob = 0;
-      build_single_residual2(pv, current_octo, 0, is_sucess, prob, single_ptpl);
+      build_single_residual(pv, current_octo, 0, is_sucess, prob, single_ptpl, sigma_num);
       if (!is_sucess)
       {
         VOXEL_LOCATION near_position = position;
@@ -1301,7 +1305,7 @@ void VoxelMapManager::BuildResidualList(std::vector<pointWithVar> &pv_list, std:
         if (loc_xyz[2] > (current_octo->voxel_center_[2] + current_octo->quater_length_)) { near_position.z = near_position.z + 1; }
         else if (loc_xyz[2] < (current_octo->voxel_center_[2] - current_octo->quater_length_)) { near_position.z = near_position.z - 1; }
         auto iter_near = voxel_map_.find(near_position);
-        if (iter_near != voxel_map_.end()) { build_single_residual2(pv, iter_near->second, 0, is_sucess, prob, single_ptpl); }
+        if (iter_near != voxel_map_.end()) { build_single_residual(pv, iter_near->second, 0, is_sucess, prob, single_ptpl, sigma_num); }
       }
       if (is_sucess)
       {
@@ -1690,7 +1694,7 @@ void VoxelMapManager::makePvList(StatesGroup &_state, const PointCloudXYZI::Ptr 
 }
 
 void VoxelMapManager::BuildResidual(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len) {
-	Vector4f pabcd;
+	Vector4d pabcd;
   Vector3d center;
   for (int i = idx; i < idx + len; i++) {
     auto &pv = pv_list[i];
@@ -1724,7 +1728,7 @@ void VoxelMapManager::BuildResidual(std::vector<pointWithVar> &pv_list, std::vec
 }
 
 void VoxelMapManager::BuildResidual2(std::vector<pointWithVar> &pv_list, std::vector<PointToPlane> &ptpl_list, int idx, int len) {
-	Vector4f pabcd;
+	Vector4d pabcd;
   Vector3d center;
   for (int i = idx; i < idx + len; i++) {
     auto &pv = pv_list[i];
@@ -1756,7 +1760,8 @@ void VoxelMapManager::BuildResidual2(std::vector<pointWithVar> &pv_list, std::ve
   }
 }
 
-bool esti_plane(Vector4f &pca_result, Vector3d &center, const PointVector &point, const double threshold) {
+bool esti_plane(Vector4d &pca_result, Vector3d &center, const PointVector &point, const double threshold) {
+  
   Matrix3f H;
   Vector3f r;
   H.setZero();
@@ -1781,6 +1786,7 @@ bool esti_plane(Vector4f &pca_result, Vector3d &center, const PointVector &point
   center(0) = -r(0) / point.size();
   center(1) = -r(1) / point.size();
   center(2) = -r(2) / point.size();
+  
 
   /*
   Matrix3d H;

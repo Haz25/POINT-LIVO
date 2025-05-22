@@ -108,7 +108,7 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: false
           Value: true
-        - Alpha: 0.20000000298023224
+        - Alpha: 1
           Autocompute Intensity Bounds: false
           Autocompute Value Bounds:
             Max Value: 15
@@ -550,7 +550,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 17.2391414642334
+      Distance: 56.64607620239258
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -558,17 +558,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 10.706754684448242
-        Y: 2.71622896194458
-        Z: 0.009865984320640564
+        X: 3.06856369972229
+        Y: -0.3403018116950989
+        Z: -13.467296600341797
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6947967410087585
+      Pitch: 1.26979660987854
       Target Frame: drone
-      Yaw: 1.6230547428131104
+      Yaw: 0.2711659073829651
     Saved:
       - Class: rviz/Orbit
         Distance: 117.53474426269531
@@ -668,5 +668,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1850
-  X: 1510
+  X: 1350
   Y: 27
