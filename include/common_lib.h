@@ -28,7 +28,7 @@ using namespace Sophus;
 #define print_line std::cout << __FILE__ << ", " << __LINE__ << std::endl;
 #define G_m_s2 (9.81)   // Gravaty const in GuangDong/China
 #define DIM_STATE (25)  // Dimension of states (Let Dim(SO(3)) = 3) plus omg and acc
-#define INIT_COV (0.01)
+#define INIT_COV (0)
 #define SIZE_LARGE (500)
 #define SIZE_SMALL (100)
 #define VEC_FROM_ARRAY(v) v[0], v[1], v[2]

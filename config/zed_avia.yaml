@@ -28,13 +28,15 @@ extrin_calib:
 
 time_offset:
   imu_time_offset: 0.0
+  #imu_time_offset: -0.118365567
   img_time_offset: 0.0
+  #img_time_offset: 0.118365567
   exposure_time_init: 0.0
 
 preprocess:
   point_filter_num: 1
   filter_en: true
-  filter_size_surf: 0.2
+  filter_size_surf: 0.5
   lidar_type: 1 # Livox Avia LiDAR
   scan_line: 6
   blind: 0.8
@@ -78,11 +80,11 @@ lio:
   layer_init_num: [5, 5, 5, 5, 5]
 
 ivox:
-  grid_resolution: 0.5
+  grid_resolution: 0.48
   nearby_type: 0
   match_s: 300
   num_match_points: 5
-  filter_size_map: 0.125
+  filter_size_map: 0.16
   noise_cov: 0.005
   map_init_size: 10000
 

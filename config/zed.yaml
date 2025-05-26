@@ -3,7 +3,7 @@ common:
   img_topic: "/zed2/zed_node/left/image_rect_color"
   lid_topic: "/velodyne_points"
   imu_topic: "/zed2/zed_node/imu/data"
-  img_en: 0
+  img_en: 1
   lidar_en: 1
   ros_driver_bug_fix: false
 
@@ -41,7 +41,7 @@ preprocess:
   blind: 0.2
 
 vio:
-  max_iterations: 0
+  max_iterations: 5
   outlier_threshold: 1000 # 78 100 156 #100 200 500 700 infinite
   img_point_cov: 100 # 100 1000 
   patch_size: 8
@@ -66,7 +66,7 @@ imu:
   satu_acc: 30.0
 
 lio:
-  max_iterations: 0  # fast-livo
+  max_iterations: 1  # fast-livo
   max_iterations_point: 1 # point-lio
   dept_err: 0.02  # 0.02
   beam_err: 0.05  # 0.05
@@ -79,12 +79,12 @@ lio:
   layer_init_num: [5, 5, 5, 5, 5]
 
 ivox:
-  grid_resolution: 0.5
+  grid_resolution: 0.48
   nearby_type: 0
   match_s: 300
   num_match_points: 5
-  filter_size_map: 0.125
-  noise_cov: 0.005
+  filter_size_map: 0.16
+  noise_cov: 0.01
   map_init_size: 10000
 
 local_map:  

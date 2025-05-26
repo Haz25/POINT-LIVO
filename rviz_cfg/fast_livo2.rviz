@@ -89,7 +89,7 @@ Visualization Manager:
           Axis: Z
           Channel Name: intensity
           Class: rviz/PointCloud2
-          Color: 0; 255; 0
+          Color: 255; 255; 255
           Color Transformer: FlatColor
           Decay Time: 0
           Enabled: true
@@ -550,7 +550,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 56.64607620239258
+      Distance: 26.419889450073242
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -558,17 +558,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 3.06856369972229
-        Y: -0.3403018116950989
-        Z: -13.467296600341797
+        X: 122.12519836425781
+        Y: 147.50051879882812
+        Z: 39.45283508300781
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.26979660987854
+      Pitch: 1.5697963237762451
       Target Frame: drone
-      Yaw: 0.2711659073829651
+      Yaw: 4.769309043884277
     Saved:
       - Class: rviz/Orbit
         Distance: 117.53474426269531

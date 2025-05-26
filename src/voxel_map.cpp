@@ -14,7 +14,7 @@ which is included as part of this source code package.
 
 void calcBodyCov(Eigen::Vector3d &pb, const float range_inc, const float degree_inc, Eigen::Matrix3d &cov)
 {
-  
+  /*
   if (pb[2] == 0) pb[2] = 0.0001;
   float range = sqrt(pb[0] * pb[0] + pb[1] * pb[1] + pb[2] * pb[2]);
   float range_var = range_inc * range_inc;
@@ -32,14 +32,14 @@ void calcBodyCov(Eigen::Vector3d &pb, const float range_inc, const float degree_
   N << base_vector1(0), base_vector2(0), base_vector1(1), base_vector2(1), base_vector1(2), base_vector2(2);
   Eigen::Matrix<double, 3, 2> A = range * direction_hat * N;
   cov = direction * range_var * direction.transpose() + A * direction_var * A.transpose();
+  */
   
-  /*
   double range2 = pb.squaredNorm();
   Eigen::Matrix3d wwT = pb * pb.transpose() / range2;
   double range_cov = range_inc * range_inc;
-  double angle_cov = degree_inc * degree_inc; //pow(sin(DEG2RAD(degree_inc)), 2);
-	cov = range_cov * wwT + angle_cov * sqrt(range2) * (Eigen::Matrix3d::Identity() - wwT);
-  */
+  double angle_cov =  pow(sin(DEG2RAD(degree_inc)), 2);
+	cov = range_cov * wwT + angle_cov * range2 * (Eigen::Matrix3d::Identity() - wwT);
+  
 }
 
 void loadVoxelConfig(ros::NodeHandle &nh, VoxelMapConfig &voxel_config)
