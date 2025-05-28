@@ -76,7 +76,8 @@ public:
                 vector<pointWithVar> &_pv_list, VoxelMapManagerPtr &voxelmap_manager);
   void UndistortPcl(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);
   void UndistortPclPointLIO(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out);  
-  void UndistortPclCustom(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);          
+  void UndistortPclCustom(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);
+  void UndistortPclSemiPoint(LidarMeasureGroup &lidar_meas, StatesGroup &state_inout, PointCloudXYZI &pcl_out, VoxelMapManagerPtr& voxelmap_manager);           
   //void processImu(StatesGroup &stat);
   void Predict(StatesGroup &stat, double dt, bool predict_state, bool prop_cov);
   void StateEstimationIMU(StatesGroup &stat);
@@ -110,6 +111,9 @@ public:
   pcl::VoxelGrid<PointType> downSizeFilterSurf;
   SLAM_MODE slam_mode;
   bool lidar_map_inited = false;
+  double filter_size = 0.4;
+  int Nmax = 3000;
+  int Nmin = 1500;
 
 private:
   void IMU_init(const MeasureGroup &meas, StatesGroup &state, int &N);

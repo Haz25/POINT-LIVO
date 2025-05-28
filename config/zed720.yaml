@@ -69,11 +69,14 @@ imu:
   bias_acc_cov: 0.0001
 
 lio:
-  max_iterations: 5
-  dept_err: 0.02
-  beam_err: 0.05
-  min_eigen_value: 0.0025 # 0.005
-  voxel_size: 0.25
+  max_iterations: 1  # fast-livo
+  max_iterations_point: 1 # point-lio
+  dept_err: 0.05
+  beam_err: 0.03
+  min_eigen_value: 0.0025
+  sigma_num: 3       # fast-livo
+  sigma_num_point: 3    # point-lio
+  voxel_size: 0.5
   max_layer: 3
   max_points_num: 50
   layer_init_num: [5, 5, 5, 5, 5]

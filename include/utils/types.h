@@ -5,6 +5,14 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+struct PointCov {
+    PCL_ADD_POINT4D;
+    float intensity;
+    float curvature;
+    Eigen::Matrix3d cov;
+};
+typedef std::vector<PointCov, Eigen::aligned_allocator<PointCov>>  PointCovVector;
+
 typedef pcl::PointXYZINormal PointType;
 typedef pcl::PointXYZRGB PointTypeRGB;
 typedef pcl::PointXYZRGBA PointTypeRGBA;

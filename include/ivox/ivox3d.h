@@ -140,6 +140,7 @@ bool IVox<dim, node_type, PointType>::GetClosestPoint(const PointType& pt, Point
                                                       double max_range) {
     std::vector<DistPoint> candidates;
     candidates.reserve(max_num * nearby_grids_.size());
+
     auto key = Pos2Grid(ToEigen<float, dim>(pt));
 
 // #define INNER_TIMER

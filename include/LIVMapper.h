@@ -101,6 +101,7 @@ public:
   double _first_lidar_time = 0.0;
   double match_time = 0, solve_time = 0, solve_const_H_time = 0;
   double time_current = 0.0, time_update_last = 0.0, time_predict_last_const = 0.0;
+  float filter_size = 0.2f;
 
   bool lidar_map_inited = false, pcd_save_en = false, pub_effect_point_en = false, pose_output_en = false, ros_driver_fix_en = false;
   int pcd_save_interval = -1, pcd_index = 0;
@@ -206,6 +207,8 @@ public:
   double aver_time_icp = 0;
   double aver_time_map_inre = 0;
   bool colmap_output_en = false;
+  double max_processing_time_vio = 0;
+  double max_processing_time_lio = 0;
 
   PointCloudXYZI pcl_wait_proc;
   sensor_msgs::ImuConstPtr last_imu;

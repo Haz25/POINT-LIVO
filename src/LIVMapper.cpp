@@ -162,6 +162,7 @@ void LIVMapper::initializeComponents()
   p_imu->set_cov(inv_expo_cov, vel_cov, gyr_state_cov, acc_state_cov, bias_gyr_cov, bias_acc_cov);
   p_imu->set_R();
   p_imu->set_satu(satu_gyr, satu_acc);
+  p_imu->filter_size = filter_size_surf_min;
 
   p_imu->set_imu_init_frame_num(imu_int_frame);
 
@@ -300,11 +301,24 @@ void LIVMapper::processImu()
 
 void LIVMapper::stateEstimationAndMapping() 
 {
+  Vector3d acc;
+  Vector3d omg;
   switch (LidarMeasures.lio_vio_flg) 
   {
     case VIO:
       handleVIO();
-      handleLIOwoUpdate();
+      //handleLIOwoUpdate();
+      acc = _state.rot * _state.acc + _state.gravity;
+      omg = _state.omg;
+      cout << "acc.norm(): " << acc.norm() << endl;
+      cout << "omg.norm(): " << omg.norm() << endl;
+      /*
+      if (acc.norm() > 1.0 or omg.norm() > 0.5) {
+        cout << "visual degeneration detected!!!" << endl;
+        _state = voxelmap_manager->state_;
+      }
+      */
+      _state = voxelmap_manager->state_;
       break;
     case LIO:
     case LO:
@@ -389,13 +403,15 @@ void LIVMapper::handleLIO() {
 
   double t_down = omp_get_wtime();
 
-  MapIncremental(voxelmap_manager->feats_down_world_);
+  MapIncremental(voxelmap_manager->feats_down_world_cov);
   feats_down_size = feats_down_body->points.size();
   voxelmap_manager->feats_down_body_ = feats_down_body;
   transformLidar(_state.rot, _state.pos, feats_down_body, feats_down_world);
   //MapIncremental(voxelmap_manager->feats_down_world_);
   voxelmap_manager->feats_down_world_ = feats_down_world;
   voxelmap_manager->feats_down_size_ = feats_down_size;
+  voxelmap_manager->feats_down_world_cov.resize(feats_down_size);
+  Nearest_Points.resize(feats_down_size);
   
   if (!lidar_map_inited) 
   {
@@ -406,7 +422,8 @@ void LIVMapper::handleLIO() {
 
   double t1 = omp_get_wtime();
 
-  voxelmap_manager->StateEstimation(state_propagat);
+  voxelmap_manager->state_ = _state;
+  voxelmap_manager->StateEstimation(_state);
   _state = voxelmap_manager->state_;
   _pv_list = voxelmap_manager->pv_list_;
 
@@ -485,8 +502,8 @@ void LIVMapper::handleLIO() {
   publish_path(pubPath);
   publish_mavros(mavros_pose_publisher);
 
-  frame_num ++;
-  aver_time_consu = aver_time_consu * (frame_num - 1) / frame_num + (t4 - t0) / frame_num;
+  frame_num++;
+  aver_time_consu = aver_time_consu * (frame_num - 1) / frame_num + (t4 - T0) / frame_num;
 
   // aver_time_icp = aver_time_icp * (frame_num - 1) / frame_num + (t2 - t1) / frame_num;
   // aver_time_map_inre = aver_time_map_inre * (frame_num - 1) / frame_num + (t4 - t3) / frame_num;
@@ -499,6 +516,7 @@ void LIVMapper::handleLIO() {
   // printf("\033[1;36m[ LIO mapping time ]: current scan: icp: %0.6f secs, map incre: %0.6f secs, total: %0.6f secs.\033[0m\n"
   //         "\033[1;36m[ LIO mapping time ]: average: icp: %0.6f secs, map incre: %0.6f secs, total: %0.6f secs.\033[0m\n",
   //         t2 - t1, t4 - t3, t4 - t0, aver_time_icp, aver_time_map_inre, aver_time_consu);
+  /*
   printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
   printf("\033[1;34m|                         LIO Mapping Time                    |\033[0m\n");
   printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
@@ -511,6 +529,19 @@ void LIVMapper::handleLIO() {
   printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Current Total Time", t4 - t0);
   printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Average Total Time", aver_time_consu);
   printf("\033[1;34m+-------------------------------------------------------z------+\033[0m\n");
+  */
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;34m|                         LIO Mapping Time                    |\033[0m\n");
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;34m| %-29s | %-27s |\033[0m\n", "Algorithm Stage", "Time (secs)");
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "DownSample", T_down - T0);
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "ICP", T2 - T1);
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "updateVoxelMap", T4 - T3);
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Current Total Time", t4 - T0);
+  printf("\033[1;36m| %-29s | %-27f |\033[0m\n", "Average Total Time", aver_time_consu);
+  printf("\033[1;34m+-------------------------------------------------------------+\033[0m\n");
 
   euler_cur = RotMtoEuler(_state.rot);
   fout_out << std::setw(20) << LidarMeasures.last_lio_update_time - _first_lidar_time << " " << euler_cur.transpose() * 57.3 << " "
@@ -528,6 +559,11 @@ void LIVMapper::handleLIOwoUpdate() {
 
   cout << "handleLIOwoUpdate" << endl;
 
+  if (ivox == nullptr) {
+    std::cout << "Ivox is not initialized!!!" << std::endl;
+    return;
+  }
+
   double t_down = omp_get_wtime();
 
   feats_down_size = feats_down_body->points.size();
@@ -535,12 +571,15 @@ void LIVMapper::handleLIOwoUpdate() {
   transformLidar(_state.rot, _state.pos, feats_down_body, feats_down_world);
   voxelmap_manager->feats_down_world_ = feats_down_world;
   voxelmap_manager->feats_down_size_ = feats_down_size;
+  voxelmap_manager->feats_down_world_cov.resize(feats_down_size);
+  Nearest_Points.resize(feats_down_size);
 
   cout << "feats_down_size: " << feats_down_size << endl;
 
   double t1 = omp_get_wtime();
 
-  voxelmap_manager->StateEstimation(state_propagat);
+  voxelmap_manager->state_ = _state;
+  voxelmap_manager->StateEstimation(_state);
   _state = voxelmap_manager->state_;
   _pv_list = voxelmap_manager->pv_list_;
 
@@ -665,13 +704,14 @@ void LIVMapper::handleLIOCustom() {
     return;
   }
 
-  downSizeFilterSurf.setInputCloud(feats_undistort);
-  if (filter_en) downSizeFilterSurf.filter(*feats_down_body);
-  else feats_down_body = feats_undistort;
+  //downSizeFilterSurf.setInputCloud(feats_undistort);
+  //if (filter_en) downSizeFilterSurf.filter(*feats_down_body);
+  //else feats_down_body = feats_undistort;
+  down_sample(*feats_undistort, *feats_down_body, filter_size);
 
   feats_down_size = feats_down_body->size();
   feats_down_world = voxelmap_manager->feats_down_world_;
-  MapIncremental(feats_down_world);
+  MapIncremental(voxelmap_manager->feats_down_world_cov);
 
   if (!lidar_map_inited) {
     lidar_map_inited = true;
@@ -717,7 +757,7 @@ void LIVMapper::handleLIOCustom() {
   T3 = omp_get_wtime();
 
   cout << "voxelmap_manager->pv_list_.size(): " << voxelmap_manager->pv_list_.size() << endl;
-  voxelmap_manager->UpdateVoxelMap(voxelmap_manager->pv_list_);
+  //voxelmap_manager->UpdateVoxelMap(voxelmap_manager->pv_list_);
   _pv_list = voxelmap_manager->pv_list_;
   //MapIncremental(feats_down_world);
   std::cout << "[ LIO ] Update Voxel Map" << std::endl;
@@ -1167,10 +1207,21 @@ void LIVMapper::run()
     handleFirstFrame();
 
     processImu();
+    filter_size = p_imu->filter_size;
 
     stateEstimationAndMapping();
 
-    cout << "\n Total Processing Time: " << omp_get_wtime() - t0 << endl << endl;
+    double processing_time = omp_get_wtime() - t0;
+    cout << "\n Total Processing Time: " << processing_time << endl << endl;
+
+    if (LidarMeasures.lio_vio_flg == VIO) {
+      if (processing_time > max_processing_time_vio) max_processing_time_vio = processing_time;
+    }
+    else if (LidarMeasures.lio_vio_flg == LIO) {
+      if (processing_time > max_processing_time_lio) max_processing_time_lio = processing_time;
+    }
+    cout << "max_processing_time_lio: " << max_processing_time_lio << endl;
+    cout << "max_processing_time_vio: " << max_processing_time_vio << endl;
   }
   savePCD();
 }
@@ -1528,8 +1579,6 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
   if (lid_raw_data_buffer.empty() && lidar_en) return false;
   if (img_buffer.empty() && img_en) return false;
   if (imu_buffer.empty() && imu_en) return false;
-
-  meas.lidar_frame_beg_time = lid_header_time_buffer.front(); 
 
   switch (slam_mode_)
   {
@@ -2068,3 +2117,4 @@ void LIVMapper::stateEstimationIMU() {
   _state.cov -= K * HP;
   _state += dx;
 }
+
