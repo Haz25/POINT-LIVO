@@ -307,18 +307,7 @@ void LIVMapper::stateEstimationAndMapping()
   {
     case VIO:
       handleVIO();
-      //handleLIOwoUpdate();
-      acc = _state.rot * _state.acc + _state.gravity;
-      omg = _state.omg;
-      cout << "acc.norm(): " << acc.norm() << endl;
-      cout << "omg.norm(): " << omg.norm() << endl;
-      /*
-      if (acc.norm() > 1.0 or omg.norm() > 0.5) {
-        cout << "visual degeneration detected!!!" << endl;
-        _state = voxelmap_manager->state_;
-      }
-      */
-      _state = voxelmap_manager->state_;
+      //_state = voxelmap_manager->state_;
       break;
     case LIO:
     case LO:
