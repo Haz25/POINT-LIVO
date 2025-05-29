@@ -53,8 +53,8 @@ preprocess:
   blind: 0.8
 
 vio:
-  max_iterations: 5
-  outlier_threshold: 1000 # 78 100 156 #100 200 500 700 infinite
+  max_iterations: 1
+  outlier_threshold: 78 # 78 100 156 #100 200 500 700 infinite
   img_point_cov: 1000 # 100 1000 
   patch_size: 8
   patch_pyrimid_level: 4
