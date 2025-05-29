@@ -3,10 +3,10 @@
 
 	<arg name="rviz" default="true" />
 
-	<rosparam command="load" file="$(find fast_livo)/config/orin.yaml" />
+	<rosparam command="load" file="$(find point_livo)/config/orin.yaml" />
 
-	<node pkg="fast_livo" type="fastlivo_mapping" name="laserMapping" output="screen">
-		<rosparam file="$(find fast_livo)/config/camera_pinhole_orin.yaml" />
+	<node pkg="point_livo" type="fastlivo_mapping" name="laserMapping" output="screen">
+		<rosparam file="$(find point_livo)/config/camera_pinhole_orin.yaml" />
 	</node>
 
 	<group if="$(arg rviz)">

@@ -2007,8 +2007,7 @@ void down_sample(const PointCloudXYZI &pcl_in, PointCloudXYZI &pcl_out, float fi
       map[key] = pt;
     }
     else {
-      Vector3f center(x + 0.5, y + 0.5, z + 0.5);
-      center *= filter_size;
+      Vector3f center((x + 0.5) * filter_size, (y + 0.5) * filter_size, (z + 0.5) * filter_size);
       if ((pt.getVector3fMap() - center).squaredNorm() < (map[key].getVector3fMap() - center).squaredNorm()) {
         map[key] = pt;
       }
