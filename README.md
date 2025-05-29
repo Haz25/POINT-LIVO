@@ -2,6 +2,7 @@
 
 ## FAST-LIVO2: Fast, Direct LiDAR-Inertial-Visual Odometry
 Point-LIO: https://github.com/hku-mars/Point-LIO
+
 FAST-LIVO2: https://github.com/hku-mars/FAST-LIVO2
 
 ### 📢 News
