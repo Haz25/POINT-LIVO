@@ -1,4 +1,4 @@
-# POINT-LIVO
+# POINT-LIVO: POINT-LIO + FAST-LIVO2
 
 ## FAST-LIVO2: Fast, Direct LiDAR-Inertial-Visual Odometry
 
