@@ -1170,12 +1170,8 @@ void ImuProcess::UndistortPclCustom(LidarMeasureGroup &lidar_meas, StatesGroup &
       }
       else { // this part is to syncronize with prop_beg_time and prop_end_time;
         double dt = cur_meas.time - last_prop_time;
-        double dt_cov = cur_meas.time - last_update_time;
-
         Predict(state_inout, dt, true, false);
-
         last_prop_time = cur_meas.time;
-        last_update_time = cur_meas.time;
       }
     }
 

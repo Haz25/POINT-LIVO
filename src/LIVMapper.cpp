@@ -308,6 +308,7 @@ void LIVMapper::stateEstimationAndMapping()
     case VIO:
       handleVIO();
       //_state = voxelmap_manager->state_;
+      //handleLIO();
       break;
     case LIO:
     case LO:

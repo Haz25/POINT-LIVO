@@ -42,8 +42,8 @@ preprocess:
 
 vio:
   max_iterations: 1
-  outlier_threshold: 78 # 78 100 156 #100 200 500 700 infinite
-  img_point_cov: 1000 # 100 1000 
+  outlier_threshold: 100 # 78 100 156 #100 200 500 700 infinite    # 200
+  img_point_cov: 1000 # 100 1000                                   # 500
   patch_size: 8
   patch_pyrimid_level: 4
   normal_en: false
