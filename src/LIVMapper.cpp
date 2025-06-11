@@ -746,7 +746,7 @@ void LIVMapper::handleLIOCustom() {
 
   T3 = omp_get_wtime();
 
-  cout << "voxelmap_manager->pv_list_.size(): " << voxelmap_manager->pv_list_.size() << endl;
+  //cout << "voxelmap_manager->pv_list_.size(): " << voxelmap_manager->pv_list_.size() << endl;
   //voxelmap_manager->UpdateVoxelMap(voxelmap_manager->pv_list_);
   _pv_list = voxelmap_manager->pv_list_;
   //MapIncremental(feats_down_world);
@@ -1391,8 +1391,17 @@ void LIVMapper::livox_pcl_cbk(const livox_ros_driver::CustomMsg::ConstPtr &msg_i
     // imu_time_offset = timediff_imu_wrt_lidar;
   }
 
+  ros::Time scan_start = msg->header.stamp;
+  uint32_t max_offset = 0;
+  for (const auto& pt : msg->points) {
+    if (pt.offset_time > max_offset)
+      max_offset = pt.offset_time;
+  }
+  ros::Time scan_end = scan_start + ros::Duration(0, max_offset);
+
   double cur_head_time = msg->header.stamp.toSec();
-  ROS_INFO("Get LiDAR, its header time: %.6f", cur_head_time);
+  ROS_INFO("Get LiDAR, its header time: %.6f, its end time: %6f", cur_head_time, scan_end.toSec());
+
   if (cur_head_time < last_timestamp_lidar)
   {
     ROS_ERROR("lidar loop back, clear buffer");
@@ -1691,7 +1700,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
       meas.pcl_proc_next->reserve(max_size);
       // deque<PointCloudXYZI::Ptr> lidar_buffer_tmp;
 
-      meas.lidar_frame_beg_time = lid_header_time_buffer.front();
+      meas.lidar_frame_beg_time = meas.last_lio_update_time;
 
       while (!lid_raw_data_buffer.empty())
       {
@@ -1718,7 +1727,7 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
         lid_header_time_buffer.pop_front();
       }
 
-      meas.lidar_frame_end_time = meas.lidar_frame_beg_time + meas.pcl_proc_next->points.back().curvature / double(1000);
+      meas.lidar_frame_end_time = meas.last_lio_update_time + meas.pcl_proc_cur->points.back().curvature / double(1000);
 
       meas.measures.push_back(m);
       meas.lio_vio_flg = LIO;
@@ -1743,6 +1752,9 @@ bool LIVMapper::sync_packages(LidarMeasureGroup &meas)
       m.lio_time = meas.last_lio_update_time;
       m.img = img_buffer.front();
       mtx_buffer.lock();
+
+      cout << "m.vio_time: " << m.vio_time << endl;
+      cout << "m.lio_time: " << m.lio_time << endl;
       // while ((!imu_buffer.empty() && (imu_time < img_capture_time)))
       // {
       //   imu_time = imu_buffer.front()->header.stamp.toSec();
