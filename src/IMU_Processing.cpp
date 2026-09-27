@@ -1687,10 +1687,10 @@ void ImuProcess::Predict(StatesGroup &stat, double dt, bool predict_state, bool 
 }
 
 void ImuProcess::StateEstimationIMU(StatesGroup &stat) {  
-  for (int k = 0; k < 3; k++) {
-    if (omg_meas[k] > 0.99 * satu_gyr) omg_meas[k] = 0.0;
-    if (acc_meas[k] > 0.99 * satu_acc) acc_meas[k] = 0.0;
-  }
+  // for (int k = 0; k < 3; k++) {
+  //   if (omg_meas[k] > 0.99 * satu_gyr) omg_meas[k] = 0.0;
+  //   if (acc_meas[k] > 0.99 * satu_acc) acc_meas[k] = 0.0;
+  // }
   
   MD(6, 1) z;
   z.block<3, 1>(0, 0) = omg_meas - stat.bias_g - stat.omg;
